@@ -25,7 +25,7 @@ jobs:
         uses: huggingface/hub-sync@6fbce0a787a7146710e588abe7a4fd5eca07f47c  # v0.1.0
         with:
           github_repo_id: vladgets/reachy_mini_conversation_app
-          huggingface_repo_id: vladgets/reachy_mini_conversation_app
+          huggingface_repo_id: vladgets/reachy_mini_conversation_app_vlad
           hf_token: ${{ secrets.HF_TOKEN }}
           repo_type: space
           space_sdk: static
