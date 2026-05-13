@@ -3,9 +3,9 @@ requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "reachy_mini_conversation_app"
+name = "reachy_mini_conversation_app_vlad"
 version = "0.6.2"
-authors = [{ name = "Pollen Robotics", email = "contact@pollen-robotics.com" }]
+authors = [{ name = "Vlad Getselevich", email = "vladgets@gmail.com" }]
 description = ""
 readme = "README.md"
 requires-python = ">=3.10"
