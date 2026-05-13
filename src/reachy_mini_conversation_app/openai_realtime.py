@@ -141,7 +141,13 @@ class OpenaiRealtimeHandler(BaseRealtimeHandler):
                 input=RealtimeAudioConfigInputParam(
                     format=AudioPCM(type="audio/pcm", rate=24000),
                     transcription=AudioTranscriptionParam(model="gpt-4o-transcribe", language="en"),
-                    turn_detection=ServerVad(type="server_vad", interrupt_response=True),
+                    turn_detection=ServerVad(
+                        type="server_vad",
+                        interrupt_response=True,
+                        threshold=0.3,
+                        prefix_padding_ms=100,
+                        silence_duration_ms=400,
+                    ),
                 ),
                 output=RealtimeAudioConfigOutputParam(
                     format=AudioPCM(type="audio/pcm", rate=24000),
