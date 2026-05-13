@@ -5,7 +5,7 @@ colorFrom: red
 colorTo: blue
 sdk: static
 pinned: false
-short_description: Talk with Reachy Mini! Personal fork with web search and tuned barge-in.
+short_description: Talk with Reachy Mini! Adds web search.
 suggested_storage: large
 tags:
  - reachy_mini
