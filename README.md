@@ -1,15 +1,20 @@
 ---
-title: Reachy Mini Conversation App
+title: Reachy Mini Conversation App (Vlad)
 emoji: 🎤
 colorFrom: red
 colorTo: blue
 sdk: static
 pinned: false
-short_description: Talk with Reachy Mini!
+short_description: Talk with Reachy Mini! Personal fork with web search and tuned barge-in.
 suggested_storage: large
 tags:
  - reachy_mini
  - reachy_mini_python_app
+ - robotics
+ - voice-assistant
+ - conversational-ai
+ - ai-assistant
+ - web-search
 ---
 
 # Reachy Mini conversation app
