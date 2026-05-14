@@ -33,23 +33,33 @@ class MuteMicrophone(Tool):
     parameters_schema = {"type": "object", "properties": {}, "required": []}
 
     async def __call__(self, deps: ToolDependencies, **kwargs: Any) -> Dict[str, Any]:
+        import logging
+        logger = logging.getLogger(__name__)
+
         env = _pulse_env()
+        candidates = {
+            "wpctl": _find("wpctl"),
+            "pactl": _find("pactl"),
+            "amixer": _find("amixer"),
+        }
+        logger.info("mute_microphone: resolved paths %s", candidates)
+
         commands = [
-            # PipeWire (Raspberry Pi OS Bookworm default)
-            ([_find("wpctl"), "set-volume", "@DEFAULT_AUDIO_SOURCE@", "0%"], env),
-            # PulseAudio / PipeWire compat layer
-            ([_find("pactl"), "set-source-volume", "@DEFAULT_SOURCE@", "0%"], env),
-            # ALSA fallbacks
-            ([_find("amixer"), "sset", "Capture", "0%"], None),
-            ([_find("amixer"), "set", "Capture", "0%"], None),
+            ([candidates["wpctl"], "set-volume", "@DEFAULT_AUDIO_SOURCE@", "0%"], env),
+            ([candidates["pactl"], "set-source-volume", "@DEFAULT_SOURCE@", "0%"], env),
+            ([candidates["amixer"], "sset", "Capture", "0%"], None),
+            ([candidates["amixer"], "set", "Capture", "0%"], None),
         ]
+        attempts = []
         for cmd, cmd_env in commands:
             try:
                 result = await asyncio.to_thread(
                     subprocess.run, cmd, capture_output=True, text=True, env=cmd_env,
                 )
+                logger.info("mute_microphone: %s rc=%d stderr=%r", cmd, result.returncode, result.stderr[:200])
                 if result.returncode == 0:
                     return {"ok": True, "method": cmd[0]}
+                attempts.append(f"{cmd[0]}(rc={result.returncode})")
             except FileNotFoundError:
-                continue
-        return {"error": "Could not set microphone volume — wpctl, pactl, and amixer not found"}
+                attempts.append(f"{cmd[0]}(not found)")
+        return {"error": f"Could not mute microphone. Tried: {', '.join(attempts)}"}
