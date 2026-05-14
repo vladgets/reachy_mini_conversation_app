@@ -45,8 +45,12 @@ class MuteMicrophone(Tool):
         logger.info("mute_microphone: resolved paths %s", candidates)
 
         commands = [
-            ([candidates["wpctl"], "set-volume", "@DEFAULT_AUDIO_SOURCE@", "0%"], env),
+            # wpctl (WirePlumber/PipeWire) — volume is 0..1 float, not "0%"
+            ([candidates["wpctl"], "set-volume", "@DEFAULT_AUDIO_SOURCE@", "0"], env),
+            ([candidates["wpctl"], "set-mute", "@DEFAULT_AUDIO_SOURCE@", "1"], env),
+            # pactl (PulseAudio compat) — uses "0%"
             ([candidates["pactl"], "set-source-volume", "@DEFAULT_SOURCE@", "0%"], env),
+            # ALSA
             ([candidates["amixer"], "sset", "Capture", "0%"], None),
             ([candidates["amixer"], "set", "Capture", "0%"], None),
         ]
