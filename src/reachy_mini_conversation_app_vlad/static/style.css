@@ -484,26 +484,30 @@ button.ghost:hover { border-color: rgba(94, 240, 193, 0.4); }
   margin-top: 12px;
 }
 .memory-row {
-  display: grid;
-  grid-template-columns: 180px 1fr auto;
-  gap: 10px;
-  align-items: center;
-}
-.memory-row input[type="text"] {
-  padding: 9px 12px;
-  font-size: 13px;
-}
-.memory-key {
-  font-size: 13px;
-  font-family: "SFMono-Regular", Menlo, Consolas, monospace;
-  color: var(--accent);
-  padding: 9px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 10px 12px;
   border: 1px solid var(--border);
   border-radius: 10px;
-  background: rgba(255,255,255,0.03);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  background: rgba(255, 255, 255, 0.02);
+}
+.memory-key {
+  font-size: 11px;
+  font-family: "SFMono-Regular", Menlo, Consolas, monospace;
+  color: var(--accent);
+  letter-spacing: 0.2px;
+}
+.memory-row-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.memory-row-controls input[type="text"] {
+  flex: 1;
+  padding: 8px 10px;
+  font-size: 13px;
+  min-width: 0;
 }
 .memory-delete-btn {
   margin: 0;
@@ -513,7 +517,7 @@ button.ghost:hover { border-color: rgba(94, 240, 193, 0.4); }
   border: 1px solid rgba(255, 92, 112, 0.3);
   box-shadow: none;
   font-size: 13px;
-  min-width: 0;
+  flex-shrink: 0;
   width: auto;
 }
 .memory-delete-btn:hover {
@@ -528,21 +532,27 @@ button.ghost:hover { border-color: rgba(94, 240, 193, 0.4); }
   padding: 12px 0;
 }
 .memory-add {
-  display: grid;
-  grid-template-columns: 180px 1fr auto auto;
-  gap: 10px;
-  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
   margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
 }
 .memory-add input[type="text"] {
+  width: 100%;
   padding: 9px 12px;
   font-size: 13px;
 }
-.memory-add button {
+.memory-add-actions {
+  display: flex;
+  gap: 8px;
+}
+.memory-add-actions button {
   margin: 0;
-  padding: 9px 14px;
+  padding: 8px 14px;
   font-size: 13px;
-  min-width: 0;
   width: auto;
 }
 
@@ -554,7 +564,5 @@ button.ghost:hover { border-color: rgba(94, 240, 193, 0.4); }
   .row { grid-template-columns: 1fr; }
   button { width: 100%; justify-content: center; }
   .actions { flex-direction: column; align-items: flex-start; }
-  .memory-row { grid-template-columns: 1fr auto; }
-  .memory-row .memory-key { display: none; }
-  .memory-add { grid-template-columns: 1fr 1fr; }
+
 }

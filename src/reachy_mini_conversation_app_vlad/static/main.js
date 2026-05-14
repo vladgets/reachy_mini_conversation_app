@@ -966,8 +966,10 @@ function initMemoryPanel() {
 
       const keyEl = document.createElement("div");
       keyEl.className = "memory-key";
-      keyEl.title = key;
       keyEl.textContent = key;
+
+      const controls = document.createElement("div");
+      controls.className = "memory-row-controls";
 
       const valInput = document.createElement("input");
       valInput.type = "text";
@@ -991,9 +993,10 @@ function initMemoryPanel() {
         }
       });
 
+      controls.appendChild(valInput);
+      controls.appendChild(delBtn);
       row.appendChild(keyEl);
-      row.appendChild(valInput);
-      row.appendChild(delBtn);
+      row.appendChild(controls);
       list.appendChild(row);
     }
   }
