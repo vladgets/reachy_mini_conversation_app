@@ -117,6 +117,11 @@ DEFAULT_MODEL_NAME_BY_BACKEND = {
     GEMINI_BACKEND: "gemini-3.1-flash-live-preview",
     HF_BACKEND: HF_DEFAULTS.model_name,
 }
+AVAILABLE_MODELS_BY_BACKEND: dict[str, list[str]] = {
+    OPENAI_BACKEND: ["gpt-realtime-2", "gpt-realtime-mini"],
+    GEMINI_BACKEND: ["gemini-3.1-flash-live-preview", "gemini-2.0-flash-live-001"],
+    HF_BACKEND: [],
+}
 BACKEND_LABEL_BY_PROVIDER = {
     OPENAI_BACKEND: "OpenAI Realtime",
     GEMINI_BACKEND: "Gemini Live",
@@ -504,6 +509,12 @@ def get_default_voice_for_backend(backend: str | None = None) -> str:
     """Return the default voice for a backend selector value."""
     normalized_backend = get_backend_choice() if backend is None else _normalize_backend_provider(backend)
     return DEFAULT_VOICE_BY_BACKEND[normalized_backend]
+
+
+def get_available_models_for_backend(backend: str | None = None) -> list[str]:
+    """Return the selectable model list for a backend."""
+    normalized_backend = get_backend_choice() if backend is None else _normalize_backend_provider(backend)
+    return list(AVAILABLE_MODELS_BY_BACKEND.get(normalized_backend, []))
 
 
 def get_hf_session_url() -> str | None:

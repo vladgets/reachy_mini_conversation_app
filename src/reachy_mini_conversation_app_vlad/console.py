@@ -41,6 +41,7 @@ from reachy_mini_conversation_app_vlad.config import (
     parse_hf_direct_target,
     get_model_name_for_backend,
     get_hf_connection_selection,
+    get_available_models_for_backend,
     refresh_runtime_config_from_env,
 )
 from reachy_mini_conversation_app_vlad.startup_settings import read_startup_settings, write_startup_settings
@@ -283,7 +284,7 @@ class LocalStream:
         """Persist GEMINI_API_KEY to environment and instance `.env`."""
         self._persist_env_value("GEMINI_API_KEY", key)
 
-    def _persist_backend_choice(self, backend: str) -> None:
+    def _persist_backend_choice(self, backend: str, model_override: Optional[str] = None) -> None:
         """Persist the selected backend without clobbering explicit model overrides."""
         current_backend = get_backend_choice()
         current_model_name = (os.getenv("MODEL_NAME") or "").strip()
@@ -298,7 +299,9 @@ class LocalStream:
             refresh_runtime_config_from_env()
             return
 
-        if current_model_name and current_model_name != get_model_name_for_backend(current_backend):
+        if model_override:
+            updates["MODEL_NAME"] = model_override
+        elif current_model_name and current_model_name != get_model_name_for_backend(current_backend):
             updates["MODEL_NAME"] = current_model_name
         else:
             updates["MODEL_NAME"] = get_model_name_for_backend(backend)
@@ -364,6 +367,7 @@ class LocalStream:
             hf_mode: Optional[str] = None
             hf_host: Optional[str] = None
             hf_port: Optional[int] = None
+            model: Optional[str] = None
 
         def _status_payload() -> dict[str, object]:
             backend_provider = get_backend_choice()
@@ -400,6 +404,7 @@ class LocalStream:
                 "can_proceed_with_gemini": can_proceed_with_gemini,
                 "can_proceed_with_hf": can_proceed_with_hf,
                 "requires_restart": requires_restart,
+                "model_name": config.MODEL_NAME,
             }
 
         # GET / -> index.html
@@ -416,6 +421,12 @@ class LocalStream:
         @self._settings_app.get("/status")
         def _status() -> JSONResponse:
             return JSONResponse(_status_payload())
+
+        # GET /models -> selectable models for a given backend
+        @self._settings_app.get("/models")
+        def _models(backend: str = "") -> JSONResponse:
+            b = backend.strip() or get_backend_choice()
+            return JSONResponse(get_available_models_for_backend(b))
 
         # GET /ready -> whether backend finished loading tools
         @self._settings_app.get("/ready")
@@ -473,7 +484,8 @@ class LocalStream:
                 else:
                     return JSONResponse({"ok": False, "error": "invalid_hf_mode"}, status_code=400)
 
-            self._persist_backend_choice(backend)
+            model_choice = (payload.model or "").strip() or None
+            self._persist_backend_choice(backend, model_override=model_choice)
             payload_data = _status_payload()
             message = "Backend saved."
             if payload_data["requires_restart"]:

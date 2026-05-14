@@ -139,12 +139,14 @@ async function validateKey(key) {
   return data;
 }
 
-async function saveBackendConfig(backend, { key = "", hfMode = "", hfHost = "", hfPort = null } = {}) {
+async function saveBackendConfig(backend, { key = "", hfMode = "", hfHost = "", hfPort = null, model = "" } = {}) {
   const body = { backend, api_key: key };
   if (backend === HF_BACKEND) {
     if (hfMode) body.hf_mode = hfMode;
     if (hfHost) body.hf_host = hfHost;
     if (hfPort !== null && hfPort !== undefined) body.hf_port = hfPort;
+  } else if (model) {
+    body.model = model;
   }
   const resp = await fetch("/backend_config", {
     method: "POST",
@@ -156,6 +158,19 @@ async function saveBackendConfig(backend, { key = "", hfMode = "", hfHost = "", 
     throw new Error(data.error || "save_failed");
   }
   return await resp.json();
+}
+
+async function getModels(backend) {
+  try {
+    const url = new URL("/models", window.location.origin);
+    if (backend) url.searchParams.set("backend", backend);
+    const resp = await fetchWithTimeout(url, {}, 3000);
+    if (!resp.ok) return [];
+    const data = await resp.json();
+    return Array.isArray(data) ? data : [];
+  } catch (e) {
+    return [];
+  }
 }
 
 // ---------- Personalities API ----------
@@ -323,6 +338,8 @@ async function init() {
   const hfHostCustom = document.getElementById("hf-host-custom");
   const hfPort = document.getElementById("hf-port");
   const hfPreview = document.getElementById("hf-preview");
+  const modelField = document.getElementById("model-field");
+  const modelSelect = document.getElementById("model-select");
 
   // Personality elements
   const pSelect = document.getElementById("personality-select");
@@ -384,6 +401,27 @@ async function init() {
     updateHFControls();
   }
 
+  async function populateModelSelect(backend, currentModel) {
+    const models = await getModels(backend);
+    modelSelect.innerHTML = "";
+    if (!models.length) {
+      show(modelField, false);
+      return;
+    }
+    for (const m of models) {
+      const opt = document.createElement("option");
+      opt.value = m;
+      opt.textContent = m;
+      modelSelect.appendChild(opt);
+    }
+    if (currentModel && models.includes(currentModel)) {
+      modelSelect.value = currentModel;
+    } else {
+      modelSelect.value = models[0];
+    }
+    show(modelField, true);
+  }
+
   function setSelectedBackend(backend) {
     selectedBackend = [OPENAI_BACKEND, GEMINI_BACKEND, HF_BACKEND].includes(backend)
       ? backend
@@ -394,6 +432,11 @@ async function init() {
     backendCards.forEach((card) => {
       card.classList.toggle("is-selected", card.dataset.backendCard === selectedBackend);
     });
+    if (selectedBackend === HF_BACKEND) {
+      show(modelField, false);
+    } else {
+      populateModelSelect(selectedBackend, modelSelect.value || "");
+    }
   }
 
   function renderCredentialPanels(status) {
@@ -481,7 +524,11 @@ async function init() {
     requires_restart: false,
   };
   populateHFFields(st);
-  setSelectedBackend(st.backend_provider || DEFAULT_BACKEND);
+  const initialBackend = st.backend_provider || DEFAULT_BACKEND;
+  setSelectedBackend(initialBackend);
+  if (initialBackend !== HF_BACKEND) {
+    await populateModelSelect(initialBackend, st.model_name || "");
+  }
   statusEl.textContent = "";
   renderCredentialPanels(st);
 
@@ -527,7 +574,8 @@ async function init() {
   backendSaveBtn.addEventListener("click", async () => {
     setStatusMessage(backendStatusEl, `Saving ${backendMeta(selectedBackend).label}...`);
     try {
-      const response = await saveBackendConfig(selectedBackend);
+      const model = selectedBackend !== HF_BACKEND ? (modelSelect.value || "") : "";
+      const response = await saveBackendConfig(selectedBackend, { model });
       setStatusMessage(backendStatusEl, response.message || "Saved. Reloading…", "ok");
       window.location.reload();
     } catch (e) {
@@ -609,7 +657,8 @@ async function init() {
       } else {
         setStatusMessage(statusEl, "Saving Gemini token...", "ok");
       }
-      await saveBackendConfig(selectedBackend, { key });
+      const model = modelSelect.value || "";
+      await saveBackendConfig(selectedBackend, { key, model });
       setStatusMessage(statusEl, "Saved. Reloading…", "ok");
       window.location.reload();
     } catch (e) {
