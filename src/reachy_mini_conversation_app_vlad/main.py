@@ -324,7 +324,10 @@ class ReachyMiniConversationApp(ReachyMiniApp):  # type: ignore[misc]
 
         args, _ = parse_args()
 
-        instance_path = self._get_instance_path().parent
+        # Use a stable user-data dir so settings survive package reinstalls.
+        # _get_instance_path().parent points into site-packages, which is wiped on reinstall.
+        instance_path = Path.home() / ".local" / "share" / "reachy_mini_conversation_app"
+        instance_path.mkdir(parents=True, exist_ok=True)
         run(
             args,
             robot=reachy_mini,
