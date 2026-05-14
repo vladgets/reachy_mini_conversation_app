@@ -1,8 +1,17 @@
+import os
 import asyncio
 import subprocess
 from typing import Any, Dict
 
 from reachy_mini_conversation_app_vlad.tools.core_tools import Tool, ToolDependencies
+
+
+def _pulse_env() -> dict:
+    """Build subprocess env with XDG_RUNTIME_DIR so pactl finds the PulseAudio/PipeWire socket."""
+    env = os.environ.copy()
+    if "XDG_RUNTIME_DIR" not in env:
+        env["XDG_RUNTIME_DIR"] = f"/run/user/{os.getuid()}"
+    return env
 
 
 class MuteMicrophone(Tool):
@@ -14,15 +23,18 @@ class MuteMicrophone(Tool):
     parameters_schema = {"type": "object", "properties": {}, "required": []}
 
     async def __call__(self, deps: ToolDependencies, **kwargs: Any) -> Dict[str, Any]:
-        # Try PulseAudio first (Raspberry Pi default), then ALSA
+        env = _pulse_env()
+        # (command, needs_pulse_env)
         commands = [
-            ["pactl", "set-source-volume", "@DEFAULT_SOURCE@", "0%"],
-            ["amixer", "set", "Capture", "0%"],
+            (["pactl", "set-source-volume", "@DEFAULT_SOURCE@", "0%"], env),
+            (["amixer", "sset", "Capture", "0%"], None),
+            (["amixer", "set", "Capture", "0%"], None),
         ]
-        for cmd in commands:
+        for cmd, cmd_env in commands:
             try:
                 result = await asyncio.to_thread(
-                    subprocess.run, cmd, capture_output=True, text=True
+                    subprocess.run, cmd, capture_output=True, text=True,
+                    env=cmd_env,
                 )
                 if result.returncode == 0:
                     return {"ok": True}

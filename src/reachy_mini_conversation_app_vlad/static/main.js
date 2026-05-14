@@ -422,7 +422,7 @@ async function init() {
     show(modelField, true);
   }
 
-  function setSelectedBackend(backend) {
+  function setSelectedBackend(backend, currentModel = "") {
     selectedBackend = [OPENAI_BACKEND, GEMINI_BACKEND, HF_BACKEND].includes(backend)
       ? backend
       : DEFAULT_BACKEND;
@@ -435,7 +435,7 @@ async function init() {
     if (selectedBackend === HF_BACKEND) {
       show(modelField, false);
     } else {
-      populateModelSelect(selectedBackend, modelSelect.value || "");
+      populateModelSelect(selectedBackend, currentModel || modelSelect.value || "");
     }
   }
 
@@ -525,10 +525,7 @@ async function init() {
   };
   populateHFFields(st);
   const initialBackend = st.backend_provider || DEFAULT_BACKEND;
-  setSelectedBackend(initialBackend);
-  if (initialBackend !== HF_BACKEND) {
-    await populateModelSelect(initialBackend, st.model_name || "");
-  }
+  setSelectedBackend(initialBackend, st.model_name || "");
   statusEl.textContent = "";
   renderCredentialPanels(st);
 
@@ -1050,17 +1047,30 @@ function initMemoryPanel() {
     }
   });
 
-  // Load and show panel
-  fetchMemory()
-    .then((data) => {
-      renderList(data.facts || {});
-      show(panel, true);
-    })
-    .catch(() => {
-      show(panel, true);
-      renderList({});
-    });
+  // Load and show panel, with retries until the route is mounted
+  async function loadMemory() {
+    const deadline = Date.now() + 15000;
+    while (true) {
+      try {
+        const data = await fetchMemory();
+        renderList(data.facts || {});
+        show(panel, true);
+        return;
+      } catch {}
+      if (Date.now() >= deadline) break;
+      await sleep(500);
+    }
+    show(panel, true);
+    renderList({});
+  }
+
+  loadMemory();
+
+  // Expose a refresh function for the visibility handler
+  return { refresh: loadMemory };
 }
 
-window.addEventListener("DOMContentLoaded", init);
-window.addEventListener("DOMContentLoaded", initMemoryPanel);
+window.addEventListener("DOMContentLoaded", () => {
+  initMemoryPanel();
+  init();
+});
