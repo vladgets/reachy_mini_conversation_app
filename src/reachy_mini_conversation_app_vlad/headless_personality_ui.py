@@ -346,11 +346,11 @@ def mount_memory_routes(app: FastAPI) -> None:
 
     from reachy_mini_conversation_app_vlad.memory import read_memory, write_memory
 
-    @app.get("/memory")
+    @app.get("/conv_memory")
     def _get_memory() -> dict:  # type: ignore
         return {"facts": read_memory()}
 
-    @app.post("/memory")
+    @app.post("/conv_memory")
     async def _save_memory(request: Request) -> dict:  # type: ignore
         try:
             raw = await request.json()
@@ -362,7 +362,7 @@ def mount_memory_routes(app: FastAPI) -> None:
         except Exception as e:
             return _JSONResponse({"ok": False, "error": str(e)}, status_code=500)  # type: ignore
 
-    @app.delete("/memory/{key}")
+    @app.delete("/conv_memory/{key}")
     def _delete_memory_key(key: str) -> dict:  # type: ignore
         facts = read_memory()
         if key not in facts:

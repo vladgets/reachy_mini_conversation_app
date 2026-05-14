@@ -94,7 +94,7 @@ async function waitForStatus(timeoutMs = 15000) {
   const deadline = Date.now() + timeoutMs;
   while (true) {
     try {
-      const url = new URL("/status", window.location.origin);
+      const url = new URL("/conv_status", window.location.origin);
       url.searchParams.set("_", Date.now().toString());
       const resp = await fetchWithTimeout(url, {}, 2000);
       if (resp.ok) return await resp.json();
@@ -915,7 +915,7 @@ async function init() {
 
 // ---------- Memory API ----------
 async function fetchMemory() {
-  const url = new URL("/memory", window.location.origin);
+  const url = new URL("/conv_memory", window.location.origin);
   url.searchParams.set("_", Date.now().toString());
   const resp = await fetchWithTimeout(url, {}, 3000);
   if (!resp.ok) throw new Error("fetch_memory_failed");
@@ -923,7 +923,7 @@ async function fetchMemory() {
 }
 
 async function saveMemory(facts) {
-  const url = new URL("/memory", window.location.origin);
+  const url = new URL("/conv_memory", window.location.origin);
   url.searchParams.set("_", Date.now().toString());
   const resp = await fetchWithTimeout(url, {
     method: "POST",
@@ -935,7 +935,7 @@ async function saveMemory(facts) {
 }
 
 async function deleteMemoryKey(key) {
-  const url = new URL(`/memory/${encodeURIComponent(key)}`, window.location.origin);
+  const url = new URL(`/conv_memory/${encodeURIComponent(key)}`, window.location.origin);
   url.searchParams.set("_", Date.now().toString());
   const resp = await fetchWithTimeout(url, { method: "DELETE" }, 3000);
   if (!resp.ok) throw new Error("delete_memory_failed");

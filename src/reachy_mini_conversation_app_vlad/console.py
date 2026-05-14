@@ -417,8 +417,9 @@ class LocalStream:
         def _favicon() -> Response:
             return Response(status_code=204)
 
-        # GET /status -> whether key is set
-        @self._settings_app.get("/status")
+        # GET /conv_status -> whether key is set
+        # Using a unique path to avoid conflicts with the desktop app's own /status route.
+        @self._settings_app.get("/conv_status")
         def _status() -> JSONResponse:
             return JSONResponse(_status_payload())
 
