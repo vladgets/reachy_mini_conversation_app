@@ -905,4 +905,159 @@ async function init() {
   }
 }
 
+// ---------- Memory API ----------
+async function fetchMemory() {
+  const url = new URL("/memory", window.location.origin);
+  url.searchParams.set("_", Date.now().toString());
+  const resp = await fetchWithTimeout(url, {}, 3000);
+  if (!resp.ok) throw new Error("fetch_memory_failed");
+  return await resp.json();
+}
+
+async function saveMemory(facts) {
+  const url = new URL("/memory", window.location.origin);
+  url.searchParams.set("_", Date.now().toString());
+  const resp = await fetchWithTimeout(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ facts }),
+  }, 5000);
+  if (!resp.ok) throw new Error("save_memory_failed");
+  return await resp.json();
+}
+
+async function deleteMemoryKey(key) {
+  const url = new URL(`/memory/${encodeURIComponent(key)}`, window.location.origin);
+  url.searchParams.set("_", Date.now().toString());
+  const resp = await fetchWithTimeout(url, { method: "DELETE" }, 3000);
+  if (!resp.ok) throw new Error("delete_memory_failed");
+  return await resp.json();
+}
+
+function initMemoryPanel() {
+  const panel = document.getElementById("memory-panel");
+  const list = document.getElementById("memory-list");
+  const statusEl = document.getElementById("memory-status");
+  const addBtn = document.getElementById("memory-add-btn");
+  const saveBtn = document.getElementById("memory-save-btn");
+  const clearBtn = document.getElementById("memory-clear-btn");
+  const addRow = document.getElementById("memory-add-row");
+  const newKey = document.getElementById("memory-new-key");
+  const newValue = document.getElementById("memory-new-value");
+  const confirmAdd = document.getElementById("memory-confirm-add");
+  const cancelAdd = document.getElementById("memory-cancel-add");
+
+  let pendingFacts = {};
+
+  function renderList(facts) {
+    pendingFacts = { ...facts };
+    list.innerHTML = "";
+    const keys = Object.keys(facts).sort();
+    if (!keys.length) {
+      const empty = document.createElement("p");
+      empty.className = "memory-empty";
+      empty.textContent = "No facts remembered yet.";
+      list.appendChild(empty);
+      return;
+    }
+    for (const key of keys) {
+      const row = document.createElement("div");
+      row.className = "memory-row";
+
+      const keyEl = document.createElement("div");
+      keyEl.className = "memory-key";
+      keyEl.title = key;
+      keyEl.textContent = key;
+
+      const valInput = document.createElement("input");
+      valInput.type = "text";
+      valInput.value = facts[key];
+      valInput.addEventListener("input", () => {
+        pendingFacts[key] = valInput.value;
+      });
+
+      const delBtn = document.createElement("button");
+      delBtn.className = "memory-delete-btn";
+      delBtn.textContent = "Remove";
+      delBtn.addEventListener("click", async () => {
+        setStatusMessage(statusEl, "Removing…");
+        try {
+          await deleteMemoryKey(key);
+          delete pendingFacts[key];
+          renderList(pendingFacts);
+          setStatusMessage(statusEl, "Removed.", "ok");
+        } catch {
+          setStatusMessage(statusEl, "Failed to remove.", "error");
+        }
+      });
+
+      row.appendChild(keyEl);
+      row.appendChild(valInput);
+      row.appendChild(delBtn);
+      list.appendChild(row);
+    }
+  }
+
+  addBtn.addEventListener("click", () => {
+    show(addRow, true);
+    show(addBtn, false);
+    newKey.value = "";
+    newValue.value = "";
+    newKey.focus();
+  });
+
+  cancelAdd.addEventListener("click", () => {
+    show(addRow, false);
+    show(addBtn, true);
+  });
+
+  confirmAdd.addEventListener("click", () => {
+    const k = newKey.value.trim().toLowerCase().replace(/\s+/g, "_");
+    const v = newValue.value.trim();
+    if (!k || !v) {
+      setStatusMessage(statusEl, "Both key and value are required.", "warn");
+      return;
+    }
+    pendingFacts[k] = v;
+    show(addRow, false);
+    show(addBtn, true);
+    renderList(pendingFacts);
+    setStatusMessage(statusEl, "Fact added — click Save changes to persist.");
+  });
+
+  saveBtn.addEventListener("click", async () => {
+    setStatusMessage(statusEl, "Saving…");
+    try {
+      await saveMemory(pendingFacts);
+      setStatusMessage(statusEl, "Saved.", "ok");
+    } catch {
+      setStatusMessage(statusEl, "Failed to save.", "error");
+    }
+  });
+
+  clearBtn.addEventListener("click", async () => {
+    if (!confirm("Clear all remembered facts?")) return;
+    setStatusMessage(statusEl, "Clearing…");
+    try {
+      await saveMemory({});
+      renderList({});
+      setStatusMessage(statusEl, "Memory cleared.", "ok");
+    } catch {
+      setStatusMessage(statusEl, "Failed to clear.", "error");
+    }
+  });
+
+  // Load and show panel
+  fetchMemory()
+    .then((data) => {
+      renderList(data.facts || {});
+      show(panel, true);
+    })
+    .catch(() => {
+      show(panel, true);
+      renderList({});
+    });
+}
+
 window.addEventListener("DOMContentLoaded", init);
+window.addEventListener("DOMContentLoaded", initMemoryPanel);

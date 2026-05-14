@@ -135,7 +135,8 @@ def get_session_instructions() -> str:
             if instructions:
                 # Expand [<name>] placeholders with content from prompts library
                 expanded_instructions = _expand_prompt_includes(instructions)
-                return expanded_instructions + _build_context_suffix()
+                from reachy_mini_conversation_app_vlad.memory import format_for_prompt
+                return expanded_instructions + _build_context_suffix() + format_for_prompt()
             logger.error(f"Profile '{profile}' has empty {INSTRUCTIONS_FILENAME}")
             sys.exit(1)
         logger.error(f"Profile {profile} has no {INSTRUCTIONS_FILENAME}")

@@ -335,3 +335,38 @@ def mount_personality_routes(
             return {"ok": True, "status": status}
         except Exception as e:
             return JSONResponse({"ok": False, "error": str(e)}, status_code=500)  # type: ignore
+
+
+def mount_memory_routes(app: FastAPI) -> None:
+    """Register memory CRUD endpoints on a FastAPI app."""
+    try:
+        from fastapi.responses import JSONResponse as _JSONResponse
+    except Exception:  # pragma: no cover
+        return
+
+    from reachy_mini_conversation_app_vlad.memory import read_memory, write_memory
+
+    @app.get("/memory")
+    def _get_memory() -> dict:  # type: ignore
+        return {"facts": read_memory()}
+
+    @app.post("/memory")
+    async def _save_memory(request: Request) -> dict:  # type: ignore
+        try:
+            raw = await request.json()
+            facts = raw.get("facts", {})
+            if not isinstance(facts, dict):
+                return _JSONResponse({"ok": False, "error": "facts must be a dict"}, status_code=400)  # type: ignore
+            write_memory({str(k): str(v) for k, v in facts.items()})
+            return {"ok": True}
+        except Exception as e:
+            return _JSONResponse({"ok": False, "error": str(e)}, status_code=500)  # type: ignore
+
+    @app.delete("/memory/{key}")
+    def _delete_memory_key(key: str) -> dict:  # type: ignore
+        facts = read_memory()
+        if key not in facts:
+            return _JSONResponse({"ok": False, "error": "key not found"}, status_code=404)  # type: ignore
+        del facts[key]
+        write_memory(facts)
+        return {"ok": True}

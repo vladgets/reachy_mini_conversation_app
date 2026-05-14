@@ -225,6 +225,30 @@
       </div>
     </div>
 
+      <div id="memory-panel" class="panel hidden">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">Memory</p>
+            <h2>What I remember</h2>
+          </div>
+          <span class="chip">Persistent</span>
+        </div>
+        <p class="muted">Facts remembered across sessions. Edit values inline or remove entries.</p>
+        <div id="memory-list" class="memory-list"></div>
+        <div class="memory-add hidden" id="memory-add-row">
+          <input id="memory-new-key" type="text" placeholder="key (e.g. user_name)" />
+          <input id="memory-new-value" type="text" placeholder="value" />
+          <button id="memory-confirm-add" class="ghost">Add</button>
+          <button id="memory-cancel-add" class="ghost">Cancel</button>
+        </div>
+        <div class="actions">
+          <button id="memory-add-btn" class="ghost">Add fact</button>
+          <button id="memory-save-btn">Save changes</button>
+          <button id="memory-clear-btn" class="ghost">Clear all</button>
+          <p id="memory-status" class="status" role="status" aria-live="polite" aria-atomic="true"></p>
+        </div>
+      </div>
+
     <script src="/static/main.js"></script>
   </body>
   </html>

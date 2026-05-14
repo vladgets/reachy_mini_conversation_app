@@ -47,7 +47,7 @@ from reachy_mini_conversation_app_vlad.config import (
 from reachy_mini_conversation_app_vlad.startup_settings import read_startup_settings, write_startup_settings
 from reachy_mini_conversation_app_vlad.audio.startup_config import apply_audio_startup_config
 from reachy_mini_conversation_app_vlad.conversation_handler import ConversationHandler
-from reachy_mini_conversation_app_vlad.headless_personality_ui import mount_personality_routes
+from reachy_mini_conversation_app_vlad.headless_personality_ui import mount_personality_routes, mount_memory_routes
 
 
 try:
@@ -591,6 +591,7 @@ class LocalStream:
                         persist_personality=self._persist_personality,
                         get_persisted_personality=self._read_persisted_personality,
                     )
+                    mount_memory_routes(self._settings_app)
             except Exception:
                 pass
             self._tasks = [
