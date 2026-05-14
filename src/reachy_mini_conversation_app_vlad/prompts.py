@@ -1,12 +1,66 @@
 import re
+import os
 import sys
+import json
 import logging
+import threading
+import urllib.request
+from datetime import datetime
 from pathlib import Path
 
 from reachy_mini_conversation_app_vlad.config import DEFAULT_PROFILES_DIRECTORY, config, get_default_voice_for_backend
 
 
 logger = logging.getLogger(__name__)
+
+_location_cache: str | None = None
+_location_fetch_done = False
+_location_lock = threading.Lock()
+
+
+def _fetch_location_from_ip() -> str:
+    """Auto-detect location via IP geolocation. Returns formatted string or empty on failure."""
+    try:
+        url = "http://ip-api.com/json/?fields=city,regionName,country,lat,lon"
+        with urllib.request.urlopen(url, timeout=3) as resp:
+            data = json.loads(resp.read())
+        city = data.get("city", "")
+        region = data.get("regionName", "")
+        country = data.get("country", "")
+        lat = data.get("lat")
+        lon = data.get("lon")
+        name_parts = [p for p in [city, region, country] if p]
+        loc_str = ", ".join(name_parts)
+        if lat is not None and lon is not None:
+            return f"{loc_str} (lat={lat:.4f}, lon={lon:.4f})"
+        return loc_str
+    except Exception:
+        return ""
+
+
+def _get_location() -> str:
+    """Return location string from env var override or cached IP detection."""
+    manual = os.getenv("REACHY_MINI_LOCATION", "").strip()
+    if manual:
+        return manual
+    global _location_cache, _location_fetch_done
+    with _location_lock:
+        if not _location_fetch_done:
+            _location_cache = _fetch_location_from_ip()
+            _location_fetch_done = True
+        return _location_cache or ""
+
+
+def _build_context_suffix() -> str:
+    """Build a context block with current date, time, and location for the system prompt."""
+    now = datetime.now()
+    date_str = now.strftime("%A, %B %d, %Y")
+    time_str = now.strftime("%I:%M %p")
+    location = _get_location()
+    lines = ["\n\n## CURRENT CONTEXT", f"Date: {date_str}", f"Time: {time_str}"]
+    if location:
+        lines.append(f"Location: {location}")
+    return "\n".join(lines)
 
 
 PROMPTS_LIBRARY_DIRECTORY = Path(__file__).parent / "prompts"
@@ -81,7 +135,7 @@ def get_session_instructions() -> str:
             if instructions:
                 # Expand [<name>] placeholders with content from prompts library
                 expanded_instructions = _expand_prompt_includes(instructions)
-                return expanded_instructions
+                return expanded_instructions + _build_context_suffix()
             logger.error(f"Profile '{profile}' has empty {INSTRUCTIONS_FILENAME}")
             sys.exit(1)
         logger.error(f"Profile {profile} has no {INSTRUCTIONS_FILENAME}")
