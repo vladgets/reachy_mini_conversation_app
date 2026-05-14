@@ -524,6 +524,14 @@ class LocalStream:
                 logger.warning(f"API key validation failed: {e}")
                 return JSONResponse({"valid": False, "error": "validation_error"}, status_code=500)
 
+        # Memory routes are file-based (no async deps) — mount them early so they
+        # are available as soon as the settings page loads, without waiting for
+        # the audio pipeline and async runner to start.
+        try:
+            mount_memory_routes(self._settings_app)
+        except Exception:
+            pass
+
         self._settings_initialized = True
 
     def launch(self) -> None:
@@ -591,7 +599,6 @@ class LocalStream:
                         persist_personality=self._persist_personality,
                         get_persisted_personality=self._read_persisted_personality,
                     )
-                    mount_memory_routes(self._settings_app)
             except Exception:
                 pass
             self._tasks = [

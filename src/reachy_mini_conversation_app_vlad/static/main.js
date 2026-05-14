@@ -160,16 +160,23 @@ async function saveBackendConfig(backend, { key = "", hfMode = "", hfHost = "", 
   return await resp.json();
 }
 
+// Static fallback model lists — used when the /models endpoint is slow or unavailable.
+const MODELS_BY_BACKEND = {
+  [OPENAI_BACKEND]: ["gpt-realtime-2", "gpt-realtime-mini"],
+  [GEMINI_BACKEND]: ["gemini-3.1-flash-live-preview", "gemini-2.0-flash-live-001"],
+  [HF_BACKEND]: [],
+};
+
 async function getModels(backend) {
   try {
     const url = new URL("/models", window.location.origin);
     if (backend) url.searchParams.set("backend", backend);
     const resp = await fetchWithTimeout(url, {}, 3000);
-    if (!resp.ok) return [];
+    if (!resp.ok) return MODELS_BY_BACKEND[backend] || [];
     const data = await resp.json();
-    return Array.isArray(data) ? data : [];
+    return Array.isArray(data) && data.length ? data : (MODELS_BY_BACKEND[backend] || []);
   } catch (e) {
-    return [];
+    return MODELS_BY_BACKEND[backend] || [];
   }
 }
 
@@ -402,7 +409,11 @@ async function init() {
   }
 
   async function populateModelSelect(backend, currentModel) {
-    const models = await getModels(backend);
+    let models = await getModels(backend);
+    // Last-resort fallback: show at least the currently configured model
+    if (!models.length && currentModel) {
+      models = [currentModel];
+    }
     modelSelect.innerHTML = "";
     if (!models.length) {
       show(modelField, false);
@@ -422,7 +433,7 @@ async function init() {
     show(modelField, true);
   }
 
-  function setSelectedBackend(backend, currentModel = "") {
+  async function setSelectedBackend(backend, currentModel = "") {
     selectedBackend = [OPENAI_BACKEND, GEMINI_BACKEND, HF_BACKEND].includes(backend)
       ? backend
       : DEFAULT_BACKEND;
@@ -435,7 +446,7 @@ async function init() {
     if (selectedBackend === HF_BACKEND) {
       show(modelField, false);
     } else {
-      populateModelSelect(selectedBackend, currentModel || modelSelect.value || "");
+      await populateModelSelect(selectedBackend, currentModel || modelSelect.value || "");
     }
   }
 
@@ -525,7 +536,7 @@ async function init() {
   };
   populateHFFields(st);
   const initialBackend = st.backend_provider || DEFAULT_BACKEND;
-  setSelectedBackend(initialBackend, st.model_name || "");
+  await setSelectedBackend(initialBackend, st.model_name || "");
   statusEl.textContent = "";
   renderCredentialPanels(st);
 
@@ -560,10 +571,10 @@ async function init() {
   });
 
   backendInputs.forEach((radio) => {
-    radio.addEventListener("change", () => {
+    radio.addEventListener("change", async () => {
       editingCredentials = false;
       input.value = "";
-      setSelectedBackend(radio.value);
+      await setSelectedBackend(radio.value);
       renderCredentialPanels(st);
     });
   });

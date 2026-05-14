@@ -16,11 +16,19 @@ def _find(cmd: str) -> str:
 
 
 def _pulse_env() -> dict:
-    """Add XDG_RUNTIME_DIR so pactl/wpctl find the PulseAudio/PipeWire socket."""
+    """Build env so pactl/wpctl can reach the PulseAudio/PipeWire session socket.
+
+    When the app runs as a launcher service, XDG_RUNTIME_DIR and
+    DBUS_SESSION_BUS_ADDRESS are often stripped from the environment.
+    wpctl needs both to reach WirePlumber; pactl needs XDG_RUNTIME_DIR.
+    """
     env = os.environ.copy()
     env["PATH"] = _SYSTEM_PATH
-    if "XDG_RUNTIME_DIR" not in env:
-        env["XDG_RUNTIME_DIR"] = f"/run/user/{os.getuid()}"
+    uid = os.getuid()
+    xdg_runtime = env.get("XDG_RUNTIME_DIR") or f"/run/user/{uid}"
+    env["XDG_RUNTIME_DIR"] = xdg_runtime
+    if "DBUS_SESSION_BUS_ADDRESS" not in env:
+        env["DBUS_SESSION_BUS_ADDRESS"] = f"unix:path={xdg_runtime}/bus"
     return env
 
 
@@ -50,7 +58,9 @@ class MuteMicrophone(Tool):
             ([candidates["wpctl"], "set-mute", "@DEFAULT_AUDIO_SOURCE@", "1"], env),
             # pactl (PulseAudio compat) — uses "0%"
             ([candidates["pactl"], "set-source-volume", "@DEFAULT_SOURCE@", "0%"], env),
-            # ALSA
+            # amixer via PipeWire PulseAudio bridge (-D pulse)
+            ([candidates["amixer"], "-D", "pulse", "sset", "Capture", "0%"], env),
+            # ALSA direct fallback
             ([candidates["amixer"], "sset", "Capture", "0%"], None),
             ([candidates["amixer"], "set", "Capture", "0%"], None),
         ]
