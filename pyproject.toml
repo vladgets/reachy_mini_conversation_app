@@ -72,7 +72,7 @@ dev = [
 ]
 
 [project.scripts]
-reachy-mini-conversation-app = "reachy_mini_conversation_app.main:main"
+reachy-mini-conversation-app = "reachy_mini_conversation_app_vlad.main:main"
 
 [tool.uv]
 dependency-metadata = [
@@ -82,7 +82,7 @@ dependency-metadata = [
 ]
 
 [project.entry-points."reachy_mini_apps"]
-reachy_mini_conversation_app_vlad = "reachy_mini_conversation_app_vlad.main:ReachyMiniConversationAppVlad"
+reachy_mini_conversation_app_vlad = "reachy_mini_conversation_app_vlad.main:ReachyMiniConversationApp"
 
 [tool.setuptools]
 package-dir = { "" = "src" }
@@ -92,7 +92,7 @@ include-package-data = true
 where = ["src"]
 
 [tool.setuptools.package-data]
-reachy_mini_conversation_app = [
+reachy_mini_conversation_app_vlad = [
   "images/*",
   "static/*",
   ".env.example",
@@ -129,7 +129,7 @@ ignore = [
 length-sort = true
 lines-after-imports = 2
 no-lines-before = ["standard-library", "local-folder"]
-known-local-folder = ["reachy_mini_conversation_app"]
+known-local-folder = ["reachy_mini_conversation_app_vlad"]
 known-first-party = ["reachy_mini", "reachy_mini_dances_library", "reachy_mini_toolbox"]
 split-on-trailing-comma = true
 
