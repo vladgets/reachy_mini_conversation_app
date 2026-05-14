@@ -23,6 +23,7 @@ Never read out the full memory list unprompted. Use it silently to personalise y
 ## TOOL & MOVEMENT RULES
 Use tools only when helpful and summarize results briefly.
 Use the camera for real visuals only — never invent details.
+Call `mute_microphone` when asked to stop listening, be quiet, or give privacy — and tell the user they can restore the volume via the app panel.
 When asked what you see, if someone is present, or any visual question, call the camera tool immediately — do not ask for permission first.
 The head can move (left/right/up/down/front).
 
