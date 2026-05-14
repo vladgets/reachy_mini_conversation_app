@@ -13,7 +13,7 @@ from openai.types.realtime import (
 from openai.types.realtime.realtime_audio_formats_param import AudioPCM
 from openai.types.realtime.realtime_audio_input_turn_detection_param import ServerVad
 
-from reachy_mini_conversation_app_vlad.config import OPENAI_BACKEND, config, get_default_voice_for_backend
+from reachy_mini_conversation_app_vlad.config import OPENAI_BACKEND, config
 from reachy_mini_conversation_app_vlad.prompts import get_session_voice, get_session_instructions
 from reachy_mini_conversation_app_vlad.base_realtime import BaseRealtimeHandler, to_realtime_tools_config
 from reachy_mini_conversation_app_vlad.tools.core_tools import ToolDependencies, get_active_tool_specs
@@ -159,61 +159,8 @@ class OpenaiRealtimeHandler(BaseRealtimeHandler):
         )
 
     async def get_available_voices(self) -> list[str]:
-        """Try to discover available voices for the configured OpenAI realtime model.
-
-        Attempts to retrieve model metadata from the OpenAI Models API and look
-        for any keys that might contain voice names. Falls back to a curated
-        list known to work with realtime if discovery fails.
-        """
-        fallback = await super().get_available_voices()
-        try:
-            model = await self.client.models.retrieve(config.MODEL_NAME)
-            raw = None
-            for attr in ("model_dump", "to_dict"):
-                fn = getattr(model, attr, None)
-                if callable(fn):
-                    try:
-                        raw = fn()
-                        break
-                    except Exception:
-                        pass
-            if raw is None:
-                try:
-                    raw = dict(model)
-                except Exception:
-                    raw = None
-
-            candidates: set[str] = set()
-
-            def _collect(obj: object) -> None:
-                try:
-                    if isinstance(obj, dict):
-                        for key, value in obj.items():
-                            key_lower = str(key).lower()
-                            if "voice" in key_lower and isinstance(value, (list, tuple)):
-                                for item in value:
-                                    if isinstance(item, str):
-                                        candidates.add(item)
-                                    elif isinstance(item, dict) and isinstance(item.get("name"), str):
-                                        candidates.add(item["name"])
-                            else:
-                                _collect(value)
-                    elif isinstance(obj, (list, tuple)):
-                        for item in obj:
-                            _collect(item)
-                except Exception:
-                    pass
-
-            if isinstance(raw, dict):
-                _collect(raw)
-
-            voices = sorted(candidates) if candidates else fallback
-            default_voice = get_default_voice_for_backend(self.BACKEND_PROVIDER)
-            if default_voice not in voices:
-                voices = [default_voice, *[voice for voice in voices if voice != default_voice]]
-            return voices
-        except Exception:
-            return fallback
+        """Return the curated voice list for the OpenAI realtime backend."""
+        return await super().get_available_voices()
 
     async def _build_realtime_client(self) -> AsyncOpenAI:
         """Build the OpenAI realtime SDK client."""
