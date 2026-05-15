@@ -11,6 +11,9 @@ from reachy_mini_conversation_app_vlad.tools.core_tools import Tool, ToolDepende
 # Launcher services run with a stripped PATH — extend it to cover common locations.
 _SYSTEM_PATH = "/usr/bin:/usr/local/bin:/usr/sbin:/bin:/sbin:" + os.environ.get("PATH", "")
 
+# Reachy Mini daemon API (same host, controls the UI slider too)
+_DAEMON_MICROPHONE_URL = "http://127.0.0.1:8000/api/volume/microphone/set"
+
 
 def _find(cmd: str) -> str:
     """Return the full path of cmd, searching system locations regardless of $PATH."""
@@ -36,23 +39,14 @@ def _usb_card_numbers() -> List[int]:
     try:
         text = Path("/proc/asound/cards").read_text(encoding="utf-8", errors="replace")
         usb_cards = []
-        for line in text.splitlines():
+        lines = text.splitlines()
+        for i, line in enumerate(lines):
             m = re.match(r"^\s*(\d+)\s+\[", line)
             if m:
                 card_no = int(m.group(1))
-                # peek at next line or current for USB hint
-                if "usb" in line.lower():
+                context = lines[i + 1] if i + 1 < len(lines) else ""
+                if "usb" in line.lower() or "usb" in context.lower():
                     usb_cards.append(card_no)
-        # Also scan for USB in subsequent lines
-        if not usb_cards:
-            lines = text.splitlines()
-            for i, line in enumerate(lines):
-                m = re.match(r"^\s*(\d+)\s+\[", line)
-                if m:
-                    card_no = int(m.group(1))
-                    context = lines[i + 1] if i + 1 < len(lines) else ""
-                    if "usb" in context.lower():
-                        usb_cards.append(card_no)
         return usb_cards if usb_cards else [1, 0]
     except Exception:
         return [1, 0]
@@ -70,27 +64,34 @@ class MuteMicrophone(Tool):
         import logging
         logger = logging.getLogger(__name__)
 
+        # Try the daemon API first — it uses the correct ALSA command AND updates the UI slider
+        try:
+            import httpx
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                resp = await client.post(_DAEMON_MICROPHONE_URL, json={"volume": 0})
+                if resp.status_code == 200:
+                    logger.info("mute_microphone: daemon API succeeded, volume=0")
+                    return {"ok": True, "method": "daemon_api"}
+                logger.warning("mute_microphone: daemon API returned %d", resp.status_code)
+        except Exception as e:
+            logger.warning("mute_microphone: daemon API failed: %s", e)
+
+        # Fallback: direct ALSA/PipeWire commands
         env = _pulse_env()
         wpctl = _find("wpctl")
         pactl = _find("pactl")
         amixer = _find("amixer")
         usb_cards = _usb_card_numbers()
-        logger.info("mute_microphone: wpctl=%s pactl=%s amixer=%s usb_cards=%s", wpctl, pactl, amixer, usb_cards)
+        logger.info("mute_microphone: fallback — wpctl=%s amixer=%s usb_cards=%s", wpctl, amixer, usb_cards)
 
-        # Build candidate control names for amixer
         control_names = ["Capture", "Mic", "PCM", "Master"]
-
         commands: List[tuple] = [
-            # wpctl (WirePlumber/PipeWire) — float volume 0..1
             ([wpctl, "set-volume", "@DEFAULT_AUDIO_SOURCE@", "0"], env),
             ([wpctl, "set-mute", "@DEFAULT_AUDIO_SOURCE@", "1"], env),
-            # pactl (PulseAudio compat layer)
             ([pactl, "set-source-volume", "@DEFAULT_SOURCE@", "0%"], env),
             ([pactl, "set-source-mute", "@DEFAULT_SOURCE@", "1"], env),
-            # amixer via PipeWire PulseAudio bridge
             *[([amixer, "-D", "pulse", "sset", ctrl, "0%"], env) for ctrl in control_names],
         ]
-        # amixer on specific ALSA cards (USB card first, then card 0)
         for card_no in usb_cards + [c for c in [0, 1, 2] if c not in usb_cards]:
             for ctrl in control_names:
                 commands.append(([amixer, "-c", str(card_no), "sset", ctrl, "0%"], None))
