@@ -84,7 +84,8 @@ class MuteMicrophone(Tool):
         usb_cards = _usb_card_numbers()
         logger.info("mute_microphone: fallback — wpctl=%s amixer=%s usb_cards=%s", wpctl, amixer, usb_cards)
 
-        control_names = ["Capture", "Mic", "PCM", "Master"]
+        # Only target capture controls — PCM and Master are playback (speaker) on USB cards
+        control_names = ["Capture", "Headset", "Mic"]
         commands: List[tuple] = [
             ([wpctl, "set-volume", "@DEFAULT_AUDIO_SOURCE@", "0"], env),
             ([wpctl, "set-mute", "@DEFAULT_AUDIO_SOURCE@", "1"], env),
