@@ -5,6 +5,6 @@
 set -e
 DIR="$(cd "$(dirname "$0")" && pwd)"
 
-echo "Downloading stockfish.js..."
-curl -fsSL "https://unpkg.com/stockfish/src/stockfish-nnue-16-single.js" -o "$DIR/stockfish.js"
+echo "Downloading stockfish.js (~1.5 MB, single-file build for browsers)..."
+curl -fsSL "https://cdn.jsdelivr.net/npm/stockfish.js@10.0.2/stockfish.js" -o "$DIR/stockfish.js"
 echo "Done — stockfish.js saved to chess_extension/"
