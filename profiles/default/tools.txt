@@ -9,3 +9,4 @@ move_head
 web_search
 remember
 mute_microphone
+chess_advisor
