@@ -15,7 +15,7 @@ Install deps (once):
 Run:
     python chess_agent/laptop_agent.py
 
-A browser will open automatically — log in to chess.com and start a game.
+A browser will open — log in to chess.com on first run (session is saved after that).
 
 Environment overrides:
     CHESS_AGENT_PORT    HTTP port to serve on (default: 8766)
@@ -35,8 +35,12 @@ import socket
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from pathlib import Path
 
 from playwright.async_api import Page, async_playwright
+
+CHROME_PATH = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+PROFILE_DIR = str(Path.home() / ".chess_agent_profile")
 
 logging.basicConfig(level=logging.WARNING)
 logger = logging.getLogger(__name__)
@@ -332,11 +336,22 @@ def _analyze(fen: str) -> dict:
 
 async def _monitor():
     async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=False)
-        ctx = await browser.new_context()
-        page = await ctx.new_page()
-        await page.goto("https://www.chess.com/play/online")
-        print("Browser opened — log in to chess.com and start a game.")
+        # Use real Chrome binary + persistent profile to bypass Cloudflare bot detection.
+        # Session is saved in ~/.chess_agent_profile so login is only needed once.
+        launch_kwargs: dict = {
+            "headless": False,
+            "args": ["--disable-blink-features=AutomationControlled"],
+        }
+        if Path(CHROME_PATH).exists():
+            launch_kwargs["executable_path"] = CHROME_PATH
+
+        ctx = await p.chromium.launch_persistent_context(PROFILE_DIR, **launch_kwargs)
+
+        page = next((pg for pg in ctx.pages if "chess.com" in pg.url), None)
+        if not page:
+            page = ctx.pages[0] if ctx.pages else await ctx.new_page()
+            await page.goto("https://www.chess.com/play/online")
+            print("Log in to chess.com — your session will be saved for next time.")
 
         print(f"Analysis server: http://localhost:{PORT}/analysis  (depth {ANALYSIS_DEPTH})\n")
 
