@@ -362,12 +362,15 @@ async def _monitor():
                     print(f"  line: {analysis.get('best_line', '')}")
                 else:
                     print(analysis.get("error", "unknown error"))
-            elif "error" in board_data:
-                board_data = {"error": board_data["error"]}
 
-            with _state_lock:
-                _state.clear()
-                _state.update(board_data)
+                with _state_lock:
+                    _state.clear()
+                    _state.update(board_data)
+            elif "error" in board_data:
+                with _state_lock:
+                    _state.clear()
+                    _state.update(board_data)
+            # position unchanged: keep existing state so best_move remains available
 
             await asyncio.sleep(1.5)
 
