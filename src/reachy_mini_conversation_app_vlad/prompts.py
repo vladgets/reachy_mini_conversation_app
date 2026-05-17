@@ -7,6 +7,7 @@ import threading
 import urllib.request
 from datetime import datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from reachy_mini_conversation_app_vlad.config import DEFAULT_PROFILES_DIRECTORY, config, get_default_voice_for_backend
 
@@ -14,14 +15,15 @@ from reachy_mini_conversation_app_vlad.config import DEFAULT_PROFILES_DIRECTORY,
 logger = logging.getLogger(__name__)
 
 _location_cache: str | None = None
+_timezone_cache: str | None = None
 _location_fetch_done = False
 _location_lock = threading.Lock()
 
 
-def _fetch_location_from_ip() -> str:
-    """Auto-detect location via IP geolocation. Returns formatted string or empty on failure."""
+def _fetch_location_from_ip() -> tuple[str, str]:
+    """Auto-detect location via IP geolocation. Returns (location_string, tz_name) or ("", "") on failure."""
     try:
-        url = "http://ip-api.com/json/?fields=city,regionName,country,lat,lon"
+        url = "http://ip-api.com/json/?fields=city,regionName,country,lat,lon,timezone"
         with urllib.request.urlopen(url, timeout=3) as resp:
             data = json.loads(resp.read())
         city = data.get("city", "")
@@ -29,34 +31,44 @@ def _fetch_location_from_ip() -> str:
         country = data.get("country", "")
         lat = data.get("lat")
         lon = data.get("lon")
+        tz_name = data.get("timezone", "")
         name_parts = [p for p in [city, region, country] if p]
         loc_str = ", ".join(name_parts)
         if lat is not None and lon is not None:
-            return f"{loc_str} (lat={lat:.4f}, lon={lon:.4f})"
-        return loc_str
+            loc_str = f"{loc_str} (lat={lat:.4f}, lon={lon:.4f})"
+        return loc_str, tz_name
     except Exception:
-        return ""
+        return "", ""
+
+
+def _get_location_and_tz() -> tuple[str, str]:
+    """Return (location_string, tz_name) from env var override or cached IP detection."""
+    manual = os.getenv("REACHY_MINI_LOCATION", "").strip()
+    global _location_cache, _timezone_cache, _location_fetch_done
+    with _location_lock:
+        if not _location_fetch_done:
+            _location_cache, _timezone_cache = _fetch_location_from_ip()
+            _location_fetch_done = True
+    location = manual if manual else (_location_cache or "")
+    return location, (_timezone_cache or "")
 
 
 def _get_location() -> str:
     """Return location string from env var override or cached IP detection."""
-    manual = os.getenv("REACHY_MINI_LOCATION", "").strip()
-    if manual:
-        return manual
-    global _location_cache, _location_fetch_done
-    with _location_lock:
-        if not _location_fetch_done:
-            _location_cache = _fetch_location_from_ip()
-            _location_fetch_done = True
-        return _location_cache or ""
+    location, _ = _get_location_and_tz()
+    return location
 
 
 def _build_context_suffix() -> str:
     """Build a context block with current date, time, and location for the system prompt."""
-    now = datetime.now()
+    location, tz_name = _get_location_and_tz()
+    try:
+        tz = ZoneInfo(tz_name) if tz_name else None
+    except ZoneInfoNotFoundError:
+        tz = None
+    now = datetime.now(tz=tz) if tz else datetime.now()
     date_str = now.strftime("%A, %B %d, %Y")
     time_str = now.strftime("%I:%M %p")
-    location = _get_location()
     lines = ["\n\n## CURRENT CONTEXT", f"Date: {date_str}", f"Time: {time_str}"]
     if location:
         lines.append(f"Location: {location}")
