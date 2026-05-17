@@ -12,12 +12,10 @@ Install deps (once):
     playwright install chromium
     brew install stockfish
 
-Option A — connect to an already-running Chrome (recommended, no login needed):
-    open -a "Google Chrome" --args --remote-debugging-port=9222
+Run:
     python chess_agent/laptop_agent.py
 
-Option B — launch a fresh browser window:
-    python chess_agent/laptop_agent.py --new-browser
+A browser will open automatically — log in to chess.com and start a game.
 
 Environment overrides:
     CHESS_AGENT_PORT    HTTP port to serve on (default: 8766)
@@ -34,7 +32,6 @@ import os
 import select
 import shutil
 import socket
-import sys
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -333,34 +330,13 @@ def _analyze(fen: str) -> dict:
 
 # ── Main monitor loop ────────────────────────────────────────────────────────
 
-async def _monitor(use_new_browser: bool):
+async def _monitor():
     async with async_playwright() as p:
-        page = None
-
-        if not use_new_browser:
-            try:
-                browser = await p.chromium.connect_over_cdp("http://localhost:9222")
-                ctx = browser.contexts[0] if browser.contexts else None
-                if ctx:
-                    pages = ctx.pages
-                    page = next((pg for pg in pages if "chess.com" in pg.url), None)
-                    if not page and pages:
-                        page = pages[0]
-                if page:
-                    print(f"Connected to Chrome tab: {page.url}")
-                else:
-                    print("Chrome connected but no chess.com tab — opening one.")
-                    page = await ctx.new_page()
-                    await page.goto("https://www.chess.com/play/online")
-            except Exception as e:
-                print(f"CDP connect failed ({e}) — launching new browser.")
-
-        if not page:
-            browser = await p.chromium.launch(headless=False)
-            ctx = await browser.new_context()
-            page = await ctx.new_page()
-            await page.goto("https://www.chess.com/play/online")
-            print("Log in to chess.com and start a game.")
+        browser = await p.chromium.launch(headless=False)
+        ctx = await browser.new_context()
+        page = await ctx.new_page()
+        await page.goto("https://www.chess.com/play/online")
+        print("Browser opened — log in to chess.com and start a game.")
 
         print(f"Analysis server: http://localhost:{PORT}/analysis  (depth {ANALYSIS_DEPTH})\n")
 
@@ -397,13 +373,11 @@ async def _monitor(use_new_browser: bool):
 
 
 def main():
-    use_new_browser = "--new-browser" in sys.argv
-
     threading.Thread(target=_start_http_server, daemon=True).start()
     threading.Thread(target=_reverse_tunnel_loop, daemon=True).start()
 
     try:
-        asyncio.run(_monitor(use_new_browser))
+        asyncio.run(_monitor())
     except KeyboardInterrupt:
         print("\nStopped.")
 
