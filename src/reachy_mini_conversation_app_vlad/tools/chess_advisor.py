@@ -44,7 +44,14 @@ class ChessAdvisor(Tool):
         url = os.getenv("CHESS_AGENT_URL", _DEFAULT_URL)
         logger.info("chess_advisor: fetching analysis from %s", url)
 
-        result = await asyncio.to_thread(_fetch_analysis, url)
+        # Retry a few times in case the laptop agent is mid-analysis
+        result: dict = {}
+        for attempt in range(4):
+            result = await asyncio.to_thread(_fetch_analysis, url)
+            if "error" not in result or "Cannot reach" in result.get("error", ""):
+                break
+            logger.info("chess_advisor: not ready yet (attempt %d/4), retrying…", attempt + 1)
+            await asyncio.sleep(1.5)
 
         if "error" in result:
             return result
