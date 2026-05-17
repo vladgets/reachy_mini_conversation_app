@@ -258,6 +258,16 @@ def run(
         else:
             app = settings_app
 
+        # Endpoint for the Reachy Chess Advisor browser extension
+        from fastapi import Request
+        from fastapi.responses import JSONResponse
+        from reachy_mini_conversation_app_vlad import chess_state
+
+        @app.post("/chess")
+        async def receive_chess_analysis(request: Request) -> JSONResponse:
+            chess_state.update(await request.json())
+            return JSONResponse({"ok": True})
+
         personality_ui.wire_events(handler, stream_manager)
 
         app = gr.mount_gradio_app(app, stream.ui, path="/")

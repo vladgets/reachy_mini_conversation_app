@@ -1,0 +1,38 @@
+{
+  "manifest_version": 3,
+  "name": "Reachy Chess Advisor",
+  "version": "1.0",
+  "description": "Analyzes chess.com positions with Stockfish and sends advice to your Reachy Mini robot.",
+
+  "permissions": ["storage"],
+  "host_permissions": [
+    "*://*.chess.com/*",
+    "http://reachy-mini.local/*",
+    "http://*/*"
+  ],
+
+  "content_scripts": [{
+    "matches": ["*://*.chess.com/*"],
+    "js": ["content.js"],
+    "run_at": "document_idle"
+  }],
+
+  "background": {
+    "service_worker": "background.js"
+  },
+
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Reachy Chess Advisor",
+    "default_icon": {
+      "16":  "icons/icon16.png",
+      "48":  "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+
+  "web_accessible_resources": [{
+    "resources": ["stockfish.js"],
+    "matches": ["*://*.chess.com/*"]
+  }]
+}
