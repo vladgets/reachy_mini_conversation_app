@@ -189,6 +189,7 @@ class PersonalityUI:
     def additional_inputs_ordered(self) -> list[Any]:
         """Return the additional inputs in the expected order for Stream."""
         return [
+            self.music_volume_slider,
             self.personalities_dropdown,
             self.apply_btn,
             self.new_personality_btn,
@@ -200,7 +201,6 @@ class PersonalityUI:
             self.voice_dropdown,
             self.available_tools_cg,
             self.save_btn,
-            self.music_volume_slider,
         ]
 
     # ---------- Event wiring ----------
