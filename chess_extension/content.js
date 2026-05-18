@@ -60,9 +60,14 @@ function readFen() {
 
 (async () => {
   // Content scripts can't construct Workers from chrome-extension:// URLs directly.
-  // Fetching as a blob and using a blob URL bypasses the cross-origin restriction.
-  const blob = await fetch(chrome.runtime.getURL('stockfish.js')).then(r => r.blob());
-  const engine = new Worker(URL.createObjectURL(blob));
+  // Workaround: create an inline worker that calls importScripts() with the
+  // extension URL — importScripts inside a worker CAN load extension resources.
+  const sfUrl = chrome.runtime.getURL('stockfish.js');
+  const workerBlob = new Blob(
+    [`importScripts('${sfUrl}');`],
+    { type: 'text/javascript' }
+  );
+  const engine = new Worker(URL.createObjectURL(workerBlob));
 
   let analyzing  = false;
   let pendingFen = null;
