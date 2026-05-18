@@ -17,7 +17,7 @@ _SYSTEM_PATH = "/usr/bin:/usr/local/bin:/usr/sbin:/bin:/sbin:" + os.environ.get(
 _ALSA_DEVICE = "reachymini_audio_sink"
 
 # Music is attenuated so Reachy's voice always cuts through clearly.
-_MUSIC_VOLUME = 0.35
+_MUSIC_VOLUME = 0.50
 
 _music_process: subprocess.Popen | None = None
 
