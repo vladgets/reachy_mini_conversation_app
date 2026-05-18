@@ -4,6 +4,7 @@ const urlInput = document.getElementById('url');
 const saveBtn  = document.getElementById('save');
 const analysisEl = document.getElementById('analysis');
 const ageEl    = document.getElementById('age');
+const errorEl  = document.getElementById('error');
 
 // Load saved URL
 chrome.storage.sync.get({ reachyUrl: 'http://reachy-mini.local:7860' }, ({ reachyUrl }) => {
@@ -11,8 +12,8 @@ chrome.storage.sync.get({ reachyUrl: 'http://reachy-mini.local:7860' }, ({ reach
 });
 
 // Load last known status
-chrome.storage.local.get(['connectionStatus', 'lastAnalysis', 'lastUpdate'], (data) => {
-  const { connectionStatus, lastAnalysis, lastUpdate } = data;
+chrome.storage.local.get(['connectionStatus', 'lastAnalysis', 'lastUpdate', 'lastError'], (data) => {
+  const { connectionStatus, lastAnalysis, lastUpdate, lastError } = data;
 
   if (connectionStatus === 'connected') {
     dot.classList.add('ok');
@@ -36,6 +37,11 @@ chrome.storage.local.get(['connectionStatus', 'lastAnalysis', 'lastUpdate'], (da
   if (lastUpdate) {
     const secs = Math.round((Date.now() - lastUpdate) / 1000);
     ageEl.textContent = `Last update: ${secs}s ago`;
+  }
+
+  if (lastError && connectionStatus !== 'connected') {
+    errorEl.style.display = 'block';
+    errorEl.textContent = `Error: ${lastError}`;
   }
 });
 

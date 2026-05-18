@@ -274,13 +274,23 @@ def run(
     _chess_app = app if args.gradio else settings_app
     if _chess_app is not None:
         from fastapi import Request
-        from fastapi.responses import JSONResponse
+        from fastapi.responses import JSONResponse, Response
         from reachy_mini_conversation_app_vlad import chess_state
+
+        _CORS_HEADERS = {
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "POST, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type",
+        }
+
+        @_chess_app.options("/chess")
+        async def chess_preflight() -> Response:
+            return Response(headers=_CORS_HEADERS)
 
         @_chess_app.post("/chess")
         async def receive_chess_analysis(request: Request) -> JSONResponse:
             chess_state.update(await request.json())
-            return JSONResponse({"ok": True})
+            return JSONResponse({"ok": True}, headers=_CORS_HEADERS)
 
     # Each async service → its own thread/loop
     movement_manager.start()
