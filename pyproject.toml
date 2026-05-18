@@ -27,6 +27,9 @@ dependencies = [
     #Gemini
     "google-genai>=1.0.0",
 
+    #Chess HTTPS server
+    "cryptography",
+
     #Reachy mini
     "reachy_mini_dances_library",
     "reachy_mini_toolbox",

@@ -297,6 +297,10 @@ def run(
         async def get_chess_state() -> JSONResponse:
             return JSONResponse(chess_state.get())
 
+    # HTTPS server for the Chess Advisor browser extension (port 7861)
+    from reachy_mini_conversation_app_vlad.chess_https import start as start_chess_https
+    start_chess_https(instance_path)
+
     # Each async service → its own thread/loop
     movement_manager.start()
     head_wobbler.start()

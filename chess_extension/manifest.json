@@ -5,6 +5,9 @@
   "description": "Analyzes chess.com positions with Stockfish and sends advice to your Reachy Mini robot.",
 
   "permissions": ["storage", "offscreen"],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; connect-src 'self' https://reachy-mini.local:7861"
+  },
   "host_permissions": [
     "*://*.chess.com/*",
     "http://reachy-mini.local/*",
