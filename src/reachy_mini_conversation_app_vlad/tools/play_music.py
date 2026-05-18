@@ -12,6 +12,9 @@ logger = logging.getLogger(__name__)
 # Launcher services run with a stripped PATH — extend it to cover common locations.
 _SYSTEM_PATH = "/usr/bin:/usr/local/bin:/usr/sbin:/bin:/sbin:" + os.environ.get("PATH", "")
 
+# dmix device configured in ~/.asoundrc for shared ALSA access alongside the app.
+_ALSA_DEVICE = "reachymini_audio_sink"
+
 _music_process: subprocess.Popen | None = None
 
 
@@ -55,9 +58,11 @@ class PlayMusic(Tool):
         env = os.environ.copy()
         env["PATH"] = _SYSTEM_PATH
 
+        # Resample to 16000 Hz to match the dmix slave rate configured in ~/.asoundrc.
         cmd = (
             f'yt-dlp "ytsearch1:{query}" -f bestaudio -o - -q 2>/dev/null'
-            f" | ffplay -nodisp -autoexit -i - 2>/dev/null"
+            f" | ffmpeg -i pipe:0 -ar 16000 -ac 2 -f s16le - 2>/dev/null"
+            f" | aplay -D {_ALSA_DEVICE} -f S16_LE -r 16000 -c 2 -q"
         )
         logger.info("play_music: %s", cmd)
 
