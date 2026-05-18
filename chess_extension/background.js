@@ -1,30 +1,44 @@
-// Service worker — receives analysis from content script and POSTs to Reachy.
-// Runs in chrome-extension:// context, not subject to mixed-content restrictions.
+// Service worker — stores analysis and delegates the HTTP fetch to an offscreen
+// document, which is an extension page and exempt from Private Network Access.
+
+async function ensureOffscreen() {
+  try {
+    await chrome.offscreen.createDocument({
+      url:           'offscreen.html',
+      reasons:       ['DOM_SCRAPING'],
+      justification: 'POST chess analysis to local Reachy device',
+    });
+  } catch (_) {
+    // Document already exists
+  }
+}
 
 chrome.runtime.onMessage.addListener((message) => {
   if (message.type !== 'ANALYSIS') return;
+
+  chrome.storage.local.set({ lastAnalysis: message.data, lastUpdate: Date.now() });
 
   chrome.storage.sync.get(
     { reachyUrl: 'http://reachy-mini.local:7860' },
     async ({ reachyUrl }) => {
       const url = `${reachyUrl.replace(/\/$/, '')}/chess`;
-      chrome.storage.local.set({ lastAnalysis: message.data, lastUpdate: Date.now() });
+      await ensureOffscreen();
 
-      try {
-        const resp = await fetch(url, {
-          method:  'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body:    JSON.stringify(message.data),
-        });
-        chrome.storage.local.set({
-          connectionStatus: resp.ok ? 'connected' : `error ${resp.status}`,
-        });
-      } catch (err) {
-        chrome.storage.local.set({
-          connectionStatus: 'disconnected',
-          lastError:        `${err.name}: ${err.message}`,
-        });
-      }
+      chrome.runtime.sendMessage(
+        { type: 'FETCH_CHESS', url, data: message.data },
+        (result) => {
+          if (chrome.runtime.lastError) {
+            chrome.storage.local.set({
+              connectionStatus: 'disconnected',
+              lastError:        chrome.runtime.lastError.message,
+            });
+            return;
+          }
+          chrome.storage.local.set({
+            connectionStatus: result?.ok ? 'connected' : `error ${result?.status ?? result?.error}`,
+          });
+        }
+      );
     }
   );
 });
