@@ -556,42 +556,6 @@ button.ghost:hover { border-color: rgba(94, 240, 193, 0.4); }
   width: auto;
 }
 
-/* Sound Mixer */
-.mixer-row {
-  display: grid;
-  grid-template-columns: 160px 1fr;
-  gap: 12px 18px;
-  align-items: center;
-  margin-top: 14px;
-}
-.mixer-row > label { margin: 0; }
-.mixer-slider-wrap {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-.mixer-slider-wrap input[type="range"] {
-  flex: 1;
-  padding: 0;
-  height: 6px;
-  border: none;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.1);
-  accent-color: var(--accent);
-  cursor: pointer;
-  box-shadow: none;
-}
-.mixer-slider-wrap input[type="range"]:focus {
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(94, 240, 193, 0.15);
-}
-.mixer-value {
-  min-width: 38px;
-  font-size: 13px;
-  color: var(--accent);
-  font-variant-numeric: tabular-nums;
-}
-
 @media (max-width: 760px) {
   .hero h1 { font-size: 26px; }
   .privacy-notice { padding: 10px 12px; }
