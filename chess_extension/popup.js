@@ -2,6 +2,7 @@ const dot      = document.getElementById('dot');
 const statusEl = document.getElementById('status');
 const urlInput = document.getElementById('url');
 const saveBtn  = document.getElementById('save');
+const testBtn  = document.getElementById('test');
 const analysisEl = document.getElementById('analysis');
 const ageEl    = document.getElementById('age');
 const errorEl  = document.getElementById('error');
@@ -43,6 +44,36 @@ chrome.storage.local.get(['connectionStatus', 'lastAnalysis', 'lastUpdate', 'las
     errorEl.style.display = 'block';
     errorEl.textContent = `Error: ${lastError}`;
   }
+});
+
+// Test connection
+testBtn.addEventListener('click', async () => {
+  const url = `${urlInput.value.trim().replace(/\/$/, '')}/chess`;
+  testBtn.textContent = '…';
+  testBtn.disabled = true;
+  try {
+    const resp = await fetch(url, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ best_move: 'e2e4', evaluation: '+0.30', side_to_move: 'white', move_number: 1, depth: 18 }),
+    });
+    if (resp.ok) {
+      dot.className = 'dot ok';
+      statusEl.textContent = 'Connected to Reachy';
+      errorEl.style.display = 'none';
+      testBtn.textContent = 'OK ✓';
+    } else {
+      testBtn.textContent = `Error ${resp.status}`;
+    }
+  } catch (e) {
+    dot.className = 'dot err';
+    statusEl.textContent = 'disconnected';
+    errorEl.style.display = 'block';
+    errorEl.textContent = `Error: ${e.message}`;
+    testBtn.textContent = 'Failed';
+  }
+  testBtn.disabled = false;
+  setTimeout(() => { testBtn.textContent = 'Test'; }, 2000);
 });
 
 // Save URL
