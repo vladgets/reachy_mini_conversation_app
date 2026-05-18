@@ -13,7 +13,19 @@ async function ensureOffscreen() {
   }
 }
 
-chrome.runtime.onMessage.addListener((message) => {
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  if (message.type === 'TEST_CONNECTION') {
+    chrome.storage.sync.get(
+      { reachyUrl: 'http://reachy-mini.local:7860' },
+      async ({ reachyUrl }) => {
+        const url = `${reachyUrl.replace(/\/$/, '')}/chess`;
+        await ensureOffscreen();
+        chrome.runtime.sendMessage({ type: 'FETCH_CHESS', url, data: message.data }, sendResponse);
+      }
+    );
+    return true;
+  }
+
   if (message.type !== 'ANALYSIS') return;
 
   chrome.storage.local.set({ lastAnalysis: message.data, lastUpdate: Date.now() });

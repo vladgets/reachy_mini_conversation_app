@@ -46,34 +46,29 @@ chrome.storage.local.get(['connectionStatus', 'lastAnalysis', 'lastUpdate', 'las
   }
 });
 
-// Test connection
-testBtn.addEventListener('click', async () => {
-  const url = `${urlInput.value.trim().replace(/\/$/, '')}/chess`;
+// Test connection — delegate to background so the fetch goes via the offscreen document
+testBtn.addEventListener('click', () => {
   testBtn.textContent = '…';
   testBtn.disabled = true;
-  try {
-    const resp = await fetch(url, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ best_move: 'e2e4', evaluation: '+0.30', side_to_move: 'white', move_number: 1, depth: 18 }),
-    });
-    if (resp.ok) {
-      dot.className = 'dot ok';
-      statusEl.textContent = 'Connected to Reachy';
-      errorEl.style.display = 'none';
-      testBtn.textContent = 'OK ✓';
-    } else {
-      testBtn.textContent = `Error ${resp.status}`;
+  chrome.runtime.sendMessage(
+    { type: 'TEST_CONNECTION', data: { best_move: 'e2e4', evaluation: '+0.30', side_to_move: 'white', move_number: 1, depth: 18 } },
+    (result) => {
+      if (result?.ok) {
+        dot.className = 'dot ok';
+        statusEl.textContent = 'Connected to Reachy';
+        errorEl.style.display = 'none';
+        testBtn.textContent = 'OK ✓';
+      } else {
+        dot.className = 'dot err';
+        statusEl.textContent = 'disconnected';
+        errorEl.style.display = 'block';
+        errorEl.textContent = `Error: ${result?.error ?? result?.status ?? 'unknown'}`;
+        testBtn.textContent = 'Failed';
+      }
+      testBtn.disabled = false;
+      setTimeout(() => { testBtn.textContent = 'Test'; }, 2000);
     }
-  } catch (e) {
-    dot.className = 'dot err';
-    statusEl.textContent = 'disconnected';
-    errorEl.style.display = 'block';
-    errorEl.textContent = `Error: ${e.message}`;
-    testBtn.textContent = 'Failed';
-  }
-  testBtn.disabled = false;
-  setTimeout(() => { testBtn.textContent = 'Test'; }, 2000);
+  );
 });
 
 // Save URL
