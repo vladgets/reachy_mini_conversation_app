@@ -251,6 +251,25 @@
         </div>
       </div>
 
+      <div id="sound-mixer-panel" class="panel hidden">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">Audio</p>
+            <h2>Sound Mixer</h2>
+          </div>
+          <span class="chip">Live</span>
+        </div>
+        <p class="muted">Adjust music volume relative to Reachy's voice. Changes take effect immediately.</p>
+        <div class="mixer-row">
+          <label for="music-volume-slider">Music volume</label>
+          <div class="mixer-slider-wrap">
+            <input id="music-volume-slider" type="range" min="0" max="100" step="1" value="50" />
+            <span id="music-volume-value" class="mixer-value">50%</span>
+          </div>
+        </div>
+        <p id="mixer-status" class="status" role="status" aria-live="polite" aria-atomic="true"></p>
+      </div>
+
     <script src="/static/main.js"></script>
   </body>
   </html>

@@ -337,6 +337,31 @@ def mount_personality_routes(
             return JSONResponse({"ok": False, "error": str(e)}, status_code=500)  # type: ignore
 
 
+def mount_sound_mixer_routes(app: FastAPI) -> None:
+    """Register sound mixer endpoints on a FastAPI app."""
+    try:
+        from fastapi.responses import JSONResponse as _JSONResponse
+    except Exception:  # pragma: no cover
+        return
+
+    from reachy_mini_conversation_app_vlad.tools import play_music as play_music_mod
+
+    @app.get("/sound_mixer")
+    def _get_mixer() -> dict:  # type: ignore
+        return {"music_volume": round(play_music_mod._MUSIC_VOLUME * 100)}
+
+    @app.post("/sound_mixer")
+    async def _set_mixer(request: Request) -> dict:  # type: ignore
+        try:
+            raw = await request.json()
+            vol = int(raw.get("music_volume", 50))
+            vol = max(0, min(100, vol))
+            play_music_mod._MUSIC_VOLUME = vol / 100.0
+            return {"ok": True, "music_volume": vol}
+        except Exception as e:
+            return _JSONResponse({"ok": False, "error": str(e)}, status_code=400)  # type: ignore
+
+
 def mount_memory_routes(app: FastAPI) -> None:
     """Register memory CRUD endpoints on a FastAPI app."""
     try:

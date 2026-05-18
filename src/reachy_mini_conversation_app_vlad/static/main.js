@@ -1081,7 +1081,67 @@ function initMemoryPanel() {
   return { refresh: loadMemory };
 }
 
+// ---------- Sound Mixer ----------
+function initSoundMixerPanel() {
+  const panel = document.getElementById("sound-mixer-panel");
+  const slider = document.getElementById("music-volume-slider");
+  const valueLabel = document.getElementById("music-volume-value");
+  const statusEl = document.getElementById("mixer-status");
+
+  let debounceTimer = null;
+
+  async function loadVolume() {
+    const deadline = Date.now() + 15000;
+    while (true) {
+      try {
+        const url = new URL("/sound_mixer", window.location.origin);
+        url.searchParams.set("_", Date.now().toString());
+        const resp = await fetchWithTimeout(url, {}, 2000);
+        if (resp.ok) {
+          const data = await resp.json();
+          const vol = typeof data.music_volume === "number" ? data.music_volume : 50;
+          slider.value = vol;
+          valueLabel.textContent = `${vol}%`;
+          show(panel, true);
+          return;
+        }
+      } catch (e) {}
+      if (Date.now() >= deadline) break;
+      await sleep(500);
+    }
+    show(panel, true);
+  }
+
+  async function saveVolume(vol) {
+    try {
+      const url = new URL("/sound_mixer", window.location.origin);
+      const resp = await fetchWithTimeout(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ music_volume: vol }),
+      }, 3000);
+      if (resp.ok) {
+        setStatusMessage(statusEl, "Saved.", "ok");
+      } else {
+        setStatusMessage(statusEl, "Failed to save.", "error");
+      }
+    } catch (e) {
+      setStatusMessage(statusEl, "Failed to save.", "error");
+    }
+  }
+
+  slider.addEventListener("input", () => {
+    const vol = parseInt(slider.value, 10);
+    valueLabel.textContent = `${vol}%`;
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => saveVolume(vol), 300);
+  });
+
+  loadVolume();
+}
+
 window.addEventListener("DOMContentLoaded", () => {
   initMemoryPanel();
+  initSoundMixerPanel();
   init();
 });
