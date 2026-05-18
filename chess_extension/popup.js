@@ -8,7 +8,7 @@ const ageEl    = document.getElementById('age');
 const errorEl  = document.getElementById('error');
 
 // Load saved URL
-chrome.storage.sync.get({ reachyUrl: 'http://localhost:7862' }, ({ reachyUrl }) => {
+chrome.storage.sync.get({ reachyUrl: 'http://reachy-mini.local:7860' }, ({ reachyUrl }) => {
   urlInput.value = reachyUrl;
 });
 
