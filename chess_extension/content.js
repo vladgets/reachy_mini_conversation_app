@@ -16,29 +16,40 @@ function readFen() {
   const board = Array.from({length: 8}, () => Array(8).fill(null));
   let found = 0;
 
-  // When playing as Black, chess.com flips the board and mirrors square-XY coords
-  const flipped = !!document.querySelector('.board.flipped, chess-board.flipped, [class*="board"][class*="flipped"]');
-
   for (const el of pieces) {
     const cls = el.className.split(' ');
     const piece = cls.map(c => PIECE_MAP[c]).find(Boolean);
     const sq = cls.find(c => c.startsWith('square-') && c.length === 9);
     if (!piece || !sq) continue;
-    let f = parseInt(sq[7]) - 1;
-    let r = parseInt(sq[8]) - 1;
-    if (flipped) { f = 7 - f; r = 7 - r; }
+    const f = parseInt(sq[7]) - 1;
+    const r = parseInt(sq[8]) - 1;
     if (f >= 0 && f < 8 && r >= 0 && r < 8) { board[r][f] = piece; found++; }
   }
 
   if (found < 2) return null;
 
-  // Active color from data-ply (odd ply = white just moved = black to move)
+  // Active color: prefer clock highlight, fall back to data-ply count
+  let active = 'w';
+  let fullmove = 1;
+
   const plies = document.querySelectorAll('[data-ply]');
   const ply = plies.length
     ? (parseInt(plies[plies.length - 1].getAttribute('data-ply')) || 0)
     : 0;
-  const active   = ply % 2 === 1 ? 'b' : 'w';
-  const fullmove = Math.floor(ply / 2) + 1;
+  active   = ply % 2 === 1 ? 'b' : 'w';
+  fullmove = Math.floor(ply / 2) + 1;
+
+  // Override with clock highlight if available (more reliable)
+  const blackClockRunning = document.querySelector(
+    '.clock-bottom.clock-running, [class*="clock"][class*="bottom"][class*="running"], ' +
+    '[data-testid="clock-bottom"][class*="running"], .clock-black.clock-running'
+  );
+  const whiteClockRunning = document.querySelector(
+    '.clock-top.clock-running, [class*="clock"][class*="top"][class*="running"], ' +
+    '[data-testid="clock-top"][class*="running"], .clock-white.clock-running'
+  );
+  if (blackClockRunning) active = 'b';
+  else if (whiteClockRunning) active = 'w';
 
   // Castling from starting square positions
   let castling = '';
