@@ -28,28 +28,35 @@ function readFen() {
 
   if (found < 2) return null;
 
-  // Active color: prefer clock highlight, fall back to data-ply count
+  // Active color detection
   let active = 'w';
   let fullmove = 1;
 
-  const plies = document.querySelectorAll('[data-ply]');
-  const ply = plies.length
-    ? (parseInt(plies[plies.length - 1].getAttribute('data-ply')) || 0)
-    : 0;
-  active   = ply % 2 === 1 ? 'b' : 'w';
-  fullmove = Math.floor(ply / 2) + 1;
+  const isPuzzle = /\/(puzzles|training)\b/.test(window.location.pathname);
 
-  // Override with clock highlight if available (more reliable)
-  const blackClockRunning = document.querySelector(
-    '.clock-bottom.clock-running, [class*="clock"][class*="bottom"][class*="running"], ' +
-    '[data-testid="clock-bottom"][class*="running"], .clock-black.clock-running'
-  );
-  const whiteClockRunning = document.querySelector(
-    '.clock-top.clock-running, [class*="clock"][class*="top"][class*="running"], ' +
-    '[data-testid="clock-top"][class*="running"], .clock-white.clock-running'
-  );
-  if (blackClockRunning) active = 'b';
-  else if (whiteClockRunning) active = 'w';
+  if (isPuzzle) {
+    // Puzzles always orient the board from the perspective of the player to move
+    const flipped = !!document.querySelector('chess-board.flipped, .board.flipped');
+    active = flipped ? 'b' : 'w';
+  } else {
+    // Regular game: use data-ply move count
+    const plies = document.querySelectorAll('[data-ply]');
+    const ply = plies.length
+      ? (parseInt(plies[plies.length - 1].getAttribute('data-ply')) || 0)
+      : 0;
+    active   = ply % 2 === 1 ? 'b' : 'w';
+    fullmove = Math.floor(ply / 2) + 1;
+
+    // Override with running clock if available
+    const blackClockRunning = document.querySelector(
+      '.clock-bottom.clock-running, .clock-black.clock-running'
+    );
+    const whiteClockRunning = document.querySelector(
+      '.clock-top.clock-running, .clock-white.clock-running'
+    );
+    if (blackClockRunning) active = 'b';
+    else if (whiteClockRunning) active = 'w';
+  }
 
   // Castling from starting square positions
   let castling = '';
