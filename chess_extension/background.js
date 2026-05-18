@@ -5,7 +5,7 @@ chrome.runtime.onMessage.addListener((message) => {
   if (message.type !== 'ANALYSIS') return;
 
   chrome.storage.sync.get(
-    { reachyUrl: 'http://reachy-mini.local:7860' },
+    { reachyUrl: 'http://localhost:8766' },
     async ({ reachyUrl }) => {
       const url = `${reachyUrl.replace(/\/$/, '')}/chess`;
       chrome.storage.local.set({ lastAnalysis: message.data, lastUpdate: Date.now() });
