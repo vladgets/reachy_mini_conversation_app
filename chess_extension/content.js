@@ -132,30 +132,9 @@ function readFen() {
           depth,
         };
 
-        // Store locally so popup shows analysis even if Reachy is offline
-        chrome.runtime.sendMessage({ type: 'STORE_ANALYSIS', data });
-
-        // POST directly from content script to Reachy
-        chrome.storage.sync.get({ reachyUrl: 'http://reachy-mini.local:7860' }, async ({ reachyUrl }) => {
-          const url = `${reachyUrl.replace(/\/$/, '')}/chess`;
-          try {
-            const resp = await fetch(url, {
-              method:  'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body:    JSON.stringify(data),
-            });
-            chrome.runtime.sendMessage({
-              type:   'CONNECTION_STATUS',
-              status: resp.ok ? 'connected' : `error ${resp.status}`,
-            });
-          } catch (err) {
-            chrome.runtime.sendMessage({
-              type:   'CONNECTION_STATUS',
-              status: 'disconnected',
-              error:  err.message,
-            });
-          }
-        });
+        // Forward to service worker — it runs in chrome-extension:// context
+        // which is not subject to mixed-content restrictions unlike this page
+        chrome.runtime.sendMessage({ type: 'ANALYSIS', data });
       }
 
       analyzing = false;
