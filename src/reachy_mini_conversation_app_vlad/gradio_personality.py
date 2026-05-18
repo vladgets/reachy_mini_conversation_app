@@ -42,6 +42,7 @@ class PersonalityUI:
         self.new_personality_btn: gr.Button
         self.available_tools_cg: gr.CheckboxGroup
         self.save_btn: gr.Button
+        self.music_volume_slider: gr.Slider
 
     # ---------- Filesystem helpers ----------
     def _list_personalities(self) -> list[str]:
@@ -176,6 +177,15 @@ class PersonalityUI:
         )
         self.save_btn = gr.Button("Save personality (instructions + tools)", interactive=not is_locked)
 
+        from reachy_mini_conversation_app_vlad.tools import play_music as play_music_mod
+        self.music_volume_slider = gr.Slider(
+            label="Music Volume (relative to voice)",
+            minimum=0,
+            maximum=100,
+            step=1,
+            value=round(play_music_mod._MUSIC_VOLUME * 100),
+        )
+
     def additional_inputs_ordered(self) -> list[Any]:
         """Return the additional inputs in the expected order for Stream."""
         return [
@@ -190,6 +200,7 @@ class PersonalityUI:
             self.voice_dropdown,
             self.available_tools_cg,
             self.save_btn,
+            self.music_volume_slider,
         ]
 
     # ---------- Event wiring ----------
@@ -306,7 +317,18 @@ class PersonalityUI:
             out = ("\n".join(comments) + ("\n" if comments else "") + body).strip() + "\n"
             return gr.update(value=out)
 
+        from reachy_mini_conversation_app_vlad.tools import play_music as play_music_mod
+
+        def _set_music_volume(value: int) -> None:
+            play_music_mod._MUSIC_VOLUME = value / 100.0
+
         with blocks:
+            self.music_volume_slider.change(
+                fn=_set_music_volume,
+                inputs=[self.music_volume_slider],
+                outputs=[],
+            )
+
             self.apply_btn.click(
                 fn=_apply_personality,
                 inputs=[self.personalities_dropdown],
