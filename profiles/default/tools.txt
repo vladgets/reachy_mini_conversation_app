@@ -10,3 +10,5 @@ web_search
 remember
 mute_microphone
 chess_advisor
+play_music
+stop_music
