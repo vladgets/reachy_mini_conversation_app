@@ -4,7 +4,7 @@
 // blocks private-network access in offscreen documents.
 
 async function postToReachy(data) {
-  const { reachyUrl } = await chrome.storage.sync.get({ reachyUrl: 'http://reachy-mini.local:7860' });
+  const { reachyUrl } = await chrome.storage.sync.get({ reachyUrl: 'http://localhost:7862' });
   const url = `${reachyUrl.replace(/\/$/, '')}/chess`;
   console.log('[chess] fetching', url);
   const resp = await fetch(url, {
