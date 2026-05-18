@@ -6,11 +6,14 @@
 async function postToReachy(data) {
   const { reachyUrl } = await chrome.storage.sync.get({ reachyUrl: 'http://reachy-mini.local:7860' });
   const url = `${reachyUrl.replace(/\/$/, '')}/chess`;
+  console.log('[chess] fetching', url);
   const resp = await fetch(url, {
     method:  'POST',
+    mode:    'cors',
     headers: { 'Content-Type': 'application/json' },
     body:    JSON.stringify(data),
   });
+  console.log('[chess] response', resp.status);
   return resp.ok ? { ok: true } : { ok: false, status: resp.status };
 }
 
@@ -18,7 +21,10 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message.type === 'TEST_CONNECTION') {
     postToReachy(message.data)
       .then(sendResponse)
-      .catch(e => sendResponse({ ok: false, error: e.message }));
+      .catch(e => {
+        console.error('[chess] fetch failed:', e.name, e.message, e);
+        sendResponse({ ok: false, error: e.message });
+      });
     return true;
   }
 
