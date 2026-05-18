@@ -19,7 +19,7 @@ chrome.runtime.onMessage.addListener((message) => {
   chrome.storage.local.set({ lastAnalysis: message.data, lastUpdate: Date.now() });
 
   chrome.storage.sync.get(
-    { reachyUrl: 'https://reachy-mini.local:7861' },
+    { reachyUrl: 'http://reachy-mini.local:7860' },
     async ({ reachyUrl }) => {
       const url = `${reachyUrl.replace(/\/$/, '')}/chess`;
       await ensureOffscreen();

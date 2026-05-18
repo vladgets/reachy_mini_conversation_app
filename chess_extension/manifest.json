@@ -6,7 +6,7 @@
 
   "permissions": ["storage", "offscreen"],
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; connect-src 'self' https://reachy-mini.local:7861"
+    "extension_pages": "script-src 'self'; connect-src 'self' http://reachy-mini.local:7860"
   },
   "host_permissions": [
     "*://*.chess.com/*",
