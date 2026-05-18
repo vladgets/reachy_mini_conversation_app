@@ -293,6 +293,10 @@ def run(
             chess_state.update(await request.json())
             return JSONResponse({"ok": True}, headers=_CORS_HEADERS)
 
+        @_chess_app.get("/chess/state")
+        async def get_chess_state() -> JSONResponse:
+            return JSONResponse(chess_state.get())
+
     # Each async service → its own thread/loop
     movement_manager.start()
     head_wobbler.start()
