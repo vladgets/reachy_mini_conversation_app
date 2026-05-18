@@ -16,13 +16,17 @@ function readFen() {
   const board = Array.from({length: 8}, () => Array(8).fill(null));
   let found = 0;
 
+  // When playing as Black, chess.com flips the board and mirrors square-XY coords
+  const flipped = !!document.querySelector('.board.flipped, chess-board.flipped, [class*="board"][class*="flipped"]');
+
   for (const el of pieces) {
     const cls = el.className.split(' ');
     const piece = cls.map(c => PIECE_MAP[c]).find(Boolean);
     const sq = cls.find(c => c.startsWith('square-') && c.length === 9);
     if (!piece || !sq) continue;
-    const f = parseInt(sq[7]) - 1;
-    const r = parseInt(sq[8]) - 1;
+    let f = parseInt(sq[7]) - 1;
+    let r = parseInt(sq[8]) - 1;
+    if (flipped) { f = 7 - f; r = 7 - r; }
     if (f >= 0 && f < 8 && r >= 0 && r < 8) { board[r][f] = piece; found++; }
   }
 
