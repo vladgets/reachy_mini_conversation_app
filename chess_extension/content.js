@@ -33,8 +33,8 @@ function readFen() {
   const ply = plies.length
     ? (parseInt(plies[plies.length - 1].getAttribute('data-ply')) || 0)
     : 0;
-  const active    = ply % 2 === 1 ? 'b' : 'w';
-  const fullmove  = Math.floor(ply / 2) + 1;
+  const active   = ply % 2 === 1 ? 'b' : 'w';
+  const fullmove = Math.floor(ply / 2) + 1;
 
   // Castling from starting square positions
   let castling = '';
@@ -56,78 +56,83 @@ function readFen() {
   return `${rows.join('/')} ${active} ${castling || '-'} - 0 ${fullmove}`;
 }
 
-// ── Stockfish ─────────────────────────────────────────────────────────────────
+// ── Main (async to allow blob Worker creation) ────────────────────────────────
 
-const engine = new Worker(chrome.runtime.getURL('stockfish.js'));
+(async () => {
+  // Content scripts can't construct Workers from chrome-extension:// URLs directly.
+  // Fetching as a blob and using a blob URL bypasses the cross-origin restriction.
+  const blob = await fetch(chrome.runtime.getURL('stockfish.js')).then(r => r.blob());
+  const engine = new Worker(URL.createObjectURL(blob));
 
-let analyzing   = false;
-let pendingFen  = null;
-let currentFen  = null;
-let pvMoves     = [];
-let evalStr     = '';
-let depth       = 0;
+  let analyzing  = false;
+  let pendingFen = null;
+  let currentFen = null;
+  let pvMoves    = [];
+  let evalStr    = '';
+  let depth      = 0;
 
-engine.onmessage = (event) => {
-  const line = typeof event === 'string' ? event : event.data;
+  engine.onmessage = (event) => {
+    const line = typeof event === 'string' ? event : event.data;
 
-  if (line.startsWith('info') && line.includes(' pv ')) {
-    const dm = line.match(/depth (\d+)/);
-    const sm = line.match(/score (cp|mate) (-?\d+)/);
-    const pm = line.match(/ pv (.+)/);
-    if (dm) depth = parseInt(dm[1]);
-    if (sm) {
-      const [, type, val] = sm, v = parseInt(val);
-      evalStr = type === 'mate'
-        ? (v > 0 ? `mate in ${v}` : `being mated in ${Math.abs(v)}`)
-        : `${v >= 0 ? '+' : ''}${(v / 100).toFixed(2)}`;
-    }
-    if (pm) pvMoves = pm[1].trim().split(' ');
-  }
-
-  if (line.startsWith('bestmove')) {
-    const bm = line.match(/bestmove (\S+)/)?.[1];
-    if (bm && bm !== '(none)') {
-      const parts  = currentFen.split(' ');
-      const active = parts[1];
-      const move   = parseInt(parts[5]);
-
-      chrome.runtime.sendMessage({
-        type: 'ANALYSIS',
-        data: {
-          fen:          currentFen,
-          best_move:    bm,
-          best_line:    pvMoves.slice(0, 8).join(' '),
-          evaluation:   evalStr,
-          side_to_move: active === 'w' ? 'white' : 'black',
-          move_number:  move,
-          depth,
-        },
-      });
+    if (line.startsWith('info') && line.includes(' pv ')) {
+      const dm = line.match(/depth (\d+)/);
+      const sm = line.match(/score (cp|mate) (-?\d+)/);
+      const pm = line.match(/ pv (.+)/);
+      if (dm) depth = parseInt(dm[1]);
+      if (sm) {
+        const [, type, val] = sm, v = parseInt(val);
+        evalStr = type === 'mate'
+          ? (v > 0 ? `mate in ${v}` : `being mated in ${Math.abs(v)}`)
+          : `${v >= 0 ? '+' : ''}${(v / 100).toFixed(2)}`;
+      }
+      if (pm) pvMoves = pm[1].trim().split(' ');
     }
 
-    analyzing = false;
-    if (pendingFen) { const next = pendingFen; pendingFen = null; analyze(next); }
+    if (line.startsWith('bestmove')) {
+      const bm = line.match(/bestmove (\S+)/)?.[1];
+      if (bm && bm !== '(none)') {
+        const parts      = currentFen.split(' ');
+        const sideToMove = parts[1] === 'w' ? 'white' : 'black';
+        const moveNumber = parseInt(parts[5]);
+
+        chrome.runtime.sendMessage({
+          type: 'ANALYSIS',
+          data: {
+            fen:          currentFen,
+            best_move:    bm,
+            best_line:    pvMoves.slice(0, 8).join(' '),
+            evaluation:   evalStr,
+            side_to_move: sideToMove,
+            move_number:  moveNumber,
+            depth,
+          },
+        });
+      }
+
+      analyzing = false;
+      if (pendingFen) { const next = pendingFen; pendingFen = null; analyze(next); }
+    }
+  };
+
+  function analyze(fen) {
+    if (analyzing) { pendingFen = fen; return; }
+    analyzing  = true;
+    currentFen = fen;
+    pvMoves    = [];
+    evalStr    = '';
+    engine.postMessage('ucinewgame');
+    engine.postMessage(`position fen ${fen}`);
+    engine.postMessage(`go depth ${DEPTH}`);
   }
-};
 
-function analyze(fen) {
-  if (analyzing) { pendingFen = fen; return; }
-  analyzing  = true;
-  currentFen = fen;
-  pvMoves    = [];
-  evalStr    = '';
-  engine.postMessage('ucinewgame');
-  engine.postMessage(`position fen ${fen}`);
-  engine.postMessage(`go depth ${DEPTH}`);
-}
+  engine.postMessage('uci');
 
-engine.postMessage('uci');
+  // ── Poll ────────────────────────────────────────────────────────────────────
 
-// ── Poll ──────────────────────────────────────────────────────────────────────
+  let prevFen = null;
 
-let prevFen = null;
-
-setInterval(() => {
-  const fen = readFen();
-  if (fen && fen !== prevFen) { prevFen = fen; analyze(fen); }
-}, POLL_MS);
+  setInterval(() => {
+    const fen = readFen();
+    if (fen && fen !== prevFen) { prevFen = fen; analyze(fen); }
+  }, POLL_MS);
+})();
