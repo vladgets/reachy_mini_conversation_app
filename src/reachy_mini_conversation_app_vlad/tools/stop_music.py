@@ -1,7 +1,7 @@
-import sys
 import logging
 from typing import Any, Dict
 
+from reachy_mini_conversation_app_vlad.tools import play_music as play_music_mod
 from reachy_mini_conversation_app_vlad.tools.core_tools import Tool, ToolDependencies
 
 
@@ -15,8 +15,5 @@ class StopMusic(Tool):
 
     async def __call__(self, deps: ToolDependencies, **kwargs: Any) -> Dict[str, Any]:
         logger.info("Tool call: stop_music")
-        mod = sys.modules.get("play_music")
-        if mod is None:
-            return {"status": "nothing_playing"}
-        stopped = mod._stop_music_process()
+        stopped = play_music_mod._stop_music_process()
         return {"status": "stopped" if stopped else "nothing_playing"}

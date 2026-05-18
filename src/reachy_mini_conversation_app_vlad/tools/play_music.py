@@ -1,3 +1,4 @@
+import atexit
 import os
 import signal
 import logging
@@ -15,7 +16,12 @@ _SYSTEM_PATH = "/usr/bin:/usr/local/bin:/usr/sbin:/bin:/sbin:" + os.environ.get(
 # dmix device configured in ~/.asoundrc for shared ALSA access alongside the app.
 _ALSA_DEVICE = "reachymini_audio_sink"
 
+# Music is attenuated so Reachy's voice always cuts through clearly.
+_MUSIC_VOLUME = 0.35
+
 _music_process: subprocess.Popen | None = None
+
+atexit.register(lambda: _stop_music_process())
 
 
 def _stop_music_process() -> bool:
@@ -58,10 +64,10 @@ class PlayMusic(Tool):
         env = os.environ.copy()
         env["PATH"] = _SYSTEM_PATH
 
-        # Resample to 16000 Hz to match the dmix slave rate configured in ~/.asoundrc.
+        # Resample to 16000 Hz and attenuate so Reachy's voice always cuts through.
         cmd = (
             f'yt-dlp "ytsearch1:{query}" -f bestaudio -o - -q 2>/dev/null'
-            f" | ffmpeg -i pipe:0 -ar 16000 -ac 2 -f s16le - 2>/dev/null"
+            f" | ffmpeg -i pipe:0 -af volume={_MUSIC_VOLUME} -ar 16000 -ac 2 -f s16le - 2>/dev/null"
             f" | aplay -D {_ALSA_DEVICE} -f S16_LE -r 16000 -c 2 -q"
         )
         logger.info("play_music: %s", cmd)
